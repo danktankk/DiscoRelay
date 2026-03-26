@@ -1,53 +1,41 @@
-module.exports = function parse(body, sourceConfig) {
-  const event = body.eventType || 'Unknown';
-  const artist = body.artist?.name || 'Unknown Artist';
-  const album = body.albums?.[0]?.title || body.album?.title || '';
-  const quality = body.release?.quality || '';
-  const qualityStr = quality ? (typeof quality === 'string' ? quality : quality.name || '') : '';
-
-  const mediaStr = album ? `**${artist}** — ${album}` : `**${artist}**`;
-
-  let icon, desc;
-  switch (event) {
-    case 'Grab':
-      icon = '📥'; desc = `Grabbed: ${mediaStr}`;
-      if (qualityStr) desc += ` (${qualityStr})`;
-      break;
-    case 'Download':
-      icon = body.isUpgrade ? '⬆️' : '✅';
-      desc = `${body.isUpgrade ? 'Upgraded' : 'Imported'}: ${mediaStr}`;
-      break;
-    case 'Rename':
-      icon = '📝'; desc = `Renamed: ${mediaStr}`;
-      break;
-    case 'ArtistAdded':
-      icon = '➕'; desc = `Added: ${mediaStr}`;
-      break;
-    case 'Health':
-      return [{
-        route: 'warning',
-        embed: {
-          title: '⚠️ Lidarr Health',
-          description: body.message || 'Health check issue',
-          color: '#F59E0B',
-          thumbnail: sourceConfig.icon,
-          footer: 'Lidarr',
-        },
-      }];
-    case 'Test':
-      icon = '🧪'; desc = 'Test notification';
-      break;
-    default:
-      icon = '🎵'; desc = `${event}: ${mediaStr}`;
+module.exports = {
+  name: 'Lidarr',
+  parse(body, config) {
+    const event = body.eventType || 'Unknown';
+    const artist = body.artist || {};
+    const album = body.album || {};
+    const release = body.release || {};
+    const tracks = body.tracks || [];
+    const title = artist.artistName || 'Unknown Artist';
+    const albumTitle = album.title || '';
+    
+    const images = artist.images || [];
+    const poster = images.find(i => i.coverType === 'poster' || i.coverType === 'banner')?.remoteUrl || '';
+    const albumImages = album.images || [];
+    const albumCover = albumImages.find(i => i.coverType === 'cover')?.remoteUrl || '';
+    
+    const quality = release.quality || '';
+    const size = release.size ? `${(release.size / 1073741824).toFixed(1)} GB` : '';
+    
+    const icons = { Grab: '📥', Download: '✅', Rename: '📝', AlbumDelete: '🗑️', ArtistDelete: '🗑️', Retag: '🏷️', Health: '⚠️', Test: '🧪' };
+    const icon = icons[event] || '🎵';
+    
+    const fields = [];
+    if (albumTitle) fields.push({ name: 'Album', value: albumTitle, inline: true });
+    if (quality) fields.push({ name: 'Quality', value: String(quality), inline: true });
+    if (size) fields.push({ name: 'Size', value: size, inline: true });
+    if (tracks.length) fields.push({ name: 'Tracks', value: String(tracks.length), inline: true });
+    
+    return [{
+      title: `${icon} ${title}${albumTitle ? ' — ' + albumTitle : ''}`,
+      description: event === 'AlbumDelete' ? '🗑️ Album removed from library' : '',
+      color: parseInt((config.sources?.lidarr?.color || '#00FF00').replace('#', ''), 16),
+      fields,
+      thumbnail: { url: config.sources?.lidarr?.icon || '' },
+      image: (albumCover || poster) ? { url: albumCover || poster } : undefined,
+      footer: { text: `Lidarr • ${event}` },
+      timestamp: new Date().toISOString(),
+      route: 'media'
+    }];
   }
-
-  return [{
-    route: sourceConfig.route || 'media',
-    embed: {
-      title: `${icon} ${desc}`,
-      color: sourceConfig.color || '#00FF00',
-      thumbnail: sourceConfig.icon,
-      footer: 'Lidarr',
-    },
-  }];
 };
