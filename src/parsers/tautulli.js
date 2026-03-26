@@ -101,6 +101,14 @@ module.exports = {
       lines.push(links.join(' • '));
     }
 
+    // If poster is local/missing but we have TMDB ID, build a TMDB poster URL
+    const tmdbPoster = tmdbId ? `https://image.tmdb.org/t/p/w500${tmdbId}` : '';
+    const finalPoster = validUrl(poster) ? poster : '';
+
+    // For the large bottom image: use art if valid, otherwise use poster as the big image
+    // Move poster to the large image slot for maximum visual impact
+    const finalArt = validUrl(art) ? art : '';
+
     const sourceIcon = config.sources?.tautulli?.icon || '';
 
     return [{
@@ -108,8 +116,8 @@ module.exports = {
       title: embedTitle,
       description: lines.filter(Boolean).join('\n') || undefined,
       color: parseInt((config.sources?.tautulli?.color || '#CC7B19').replace('#', ''), 16),
-      thumbnail: validUrl(poster) ? { url: poster } : undefined,
-      image: validUrl(art) ? { url: art } : undefined,
+      thumbnail: finalPoster ? { url: finalPoster } : undefined,
+      image: finalArt ? { url: finalArt } : (finalPoster ? { url: finalPoster } : undefined),
       footer: { text: (library && library !== '{library_name}') ? library : 'Plex' },
       timestamp: new Date().toISOString(),
       route: 'media'
