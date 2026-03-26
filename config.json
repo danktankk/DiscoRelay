@@ -1,9 +1,9 @@
 {
   "discord": {
-    "critical": "PASTE_YOUR_WEBHOOK_HERE",
-    "warning": "PASTE_YOUR_WEBHOOK_HERE",
-    "daily": "PASTE_YOUR_WEBHOOK_HERE",
-    "media": "PASTE_YOUR_WEBHOOK_HERE"
+    "critical": "https://discord.com/api/webhooks/REDACTED/REDACTED",
+    "warning": "https://discord.com/api/webhooks/REDACTED/REDACTED",
+    "daily": "https://discord.com/api/webhooks/REDACTED/REDACTED",
+    "media": "https://discord.com/api/webhooks/REDACTED/REDACTED"
   },
   "port": 3080,
   "sources": {
