@@ -1,9 +1,9 @@
 {
   "discord": {
-    "critical": "PASTE_YOUR_WEBHOOK_HERE",
-    "warning": "PASTE_YOUR_WEBHOOK_HERE",
-    "daily": "PASTE_YOUR_WEBHOOK_HERE",
-    "media": "PASTE_YOUR_WEBHOOK_HERE"
+    "critical": "https://discordapp.com/api/webhooks/1486463868820652175/mSQRMqKZJ5xQpz9RvO-yFhMM_gsdoNQ4FGbI2su8JBYY5ITek_IsotF02SyjPiPkv7OC",
+    "warning": "https://discordapp.com/api/webhooks/1486464030695489807/G2r6Ogz-b-xC30pP7cR-qroSVXOGR-Trme7Oq7TW6WRNiOZerm7-Q__gqCaJsG4dpjrK",
+    "daily": "https://discordapp.com/api/webhooks/1486464121825267945/NRMoPaQmVPgN6DxgIgF5QH28SNbXNI5-mAPpJsUv69uRLfrdUnJUmB9iVLjyc1_-6Gd5",
+    "media": "https://discordapp.com/api/webhooks/1486485885225664565/KqTcfKJCAXQmJNnIDSlyzv99WIFKcPhNWKY2VxD3yso-kF-2epOYpcHIU06jlxuKoxPN"
   },
   "port": 3080,
   "sources": {
