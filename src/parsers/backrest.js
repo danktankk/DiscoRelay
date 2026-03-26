@@ -4,15 +4,13 @@ module.exports = {
     const event = body.event || '';
     const plan = body.plan || '';
     const repo = body.repo || '';
-    const task = body.task || '';
     const snapshot = body.snapshot || '';
-    const hasError = body.has_error || body.error || false;
     const error = body.error || '';
     const time = body.time || '';
     const stats = body.stats || {};
 
     // Success/failure — big and obvious
-    const isError = !!hasError || event.toLowerCase().includes('error') || event.toLowerCase().includes('fail');
+    const isError = !!error || event.toLowerCase().includes('error') || event.toLowerCase().includes('fail');
     const isWarning = event.toLowerCase().includes('warning') || event.toLowerCase().includes('warn');
     const isSuccess = !isError && !isWarning;
 
@@ -35,13 +33,12 @@ module.exports = {
     if (plan) fields.push({ name: 'Plan', value: plan, inline: true });
     if (repo) fields.push({ name: 'Repository', value: repo, inline: true });
     if (event) fields.push({ name: 'Event', value: event, inline: true });
-    if (stats.data_added_pretty) fields.push({ name: 'Data Added', value: stats.data_added_pretty, inline: true });
+    if (stats.data_added) fields.push({ name: 'Data Added', value: stats.data_added, inline: true });
     if (stats.total_files) fields.push({ name: 'Files Processed', value: String(stats.total_files).replace(/\B(?=(\d{3})+(?!\d))/g, ','), inline: true });
-    if (stats.total_bytes_pretty) fields.push({ name: 'Total Size', value: stats.total_bytes_pretty, inline: true });
-    if (stats.files_new) fields.push({ name: 'New Files', value: String(stats.files_new).replace(/\B(?=(\d{3})+(?!\d))/g, ','), inline: true });
-    if (stats.files_changed) fields.push({ name: 'Changed Files', value: String(stats.files_changed).replace(/\B(?=(\d{3})+(?!\d))/g, ','), inline: true });
-    const duration = stats.duration || (stats.duration_secs ? `${Number(stats.duration_secs).toFixed(1)}s` : '');
-    if (duration) fields.push({ name: 'Duration', value: duration, inline: true });
+    if (stats.total_bytes) fields.push({ name: 'Total Size', value: stats.total_bytes, inline: true });
+    if (stats.files_new != null) fields.push({ name: 'New Files', value: String(stats.files_new).replace(/\B(?=(\d{3})+(?!\d))/g, ','), inline: true });
+    if (stats.files_changed != null) fields.push({ name: 'Changed Files', value: String(stats.files_changed).replace(/\B(?=(\d{3})+(?!\d))/g, ','), inline: true });
+    if (stats.duration_secs != null) fields.push({ name: 'Duration', value: `${Number(stats.duration_secs).toFixed(1)}s`, inline: true });
     if (snapshot) fields.push({ name: 'Snapshot', value: snapshot.substring(0, 16), inline: false });
 
     const sourceIcon = config.sources?.backrest?.icon || '';
