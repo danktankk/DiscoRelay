@@ -1,0 +1,12 @@
+services:
+  discorelay:
+    build: .
+    container_name: discorelay
+    restart: unless-stopped
+    ports:
+      - "3080:3080"
+    volumes:
+      - ./config.json:/app/config.json:ro
+    environment:
+      - CONFIG_PATH=/app/config.json
+      - NODE_ENV=production
