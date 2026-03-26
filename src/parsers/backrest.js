@@ -39,7 +39,8 @@ module.exports = {
     if (stats.total_bytes_pretty) fields.push({ name: 'Total Size', value: stats.total_bytes_pretty, inline: true });
     if (stats.files_new) fields.push({ name: 'New Files', value: String(stats.files_new).replace(/\B(?=(\d{3})+(?!\d))/g, ','), inline: true });
     if (stats.files_changed) fields.push({ name: 'Changed Files', value: String(stats.files_changed).replace(/\B(?=(\d{3})+(?!\d))/g, ','), inline: true });
-    if (stats.duration) fields.push({ name: 'Duration', value: stats.duration, inline: true });
+    const duration = stats.duration || (stats.duration_secs ? `${Number(stats.duration_secs).toFixed(1)}s` : '');
+    if (duration) fields.push({ name: 'Duration', value: duration, inline: true });
     if (snapshot) fields.push({ name: 'Snapshot', value: snapshot.substring(0, 16), inline: false });
 
     const sourceIcon = config.sources?.backrest?.icon || '';
