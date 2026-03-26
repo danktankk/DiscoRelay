@@ -1,69 +1,45 @@
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
-const { sendEmbed } = require('./discord');
+const DiscordSender = require('./discord');
 
-// Load config
 const configPath = process.env.CONFIG_PATH || path.join(__dirname, '..', 'config.json');
-if (!fs.existsSync(configPath)) {
-  console.error(`Config not found: ${configPath}`);
-  console.error('Copy config.example.json to config.json and fill in your webhook URLs.');
-  process.exit(1);
-}
 const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+const discord = new DiscordSender(config);
+const app = express();
+app.use(express.json({ limit: '10mb' }));
 
-// Load parsers
+// Auto-load parsers
 const parsers = {};
 const parserDir = path.join(__dirname, 'parsers');
 for (const file of fs.readdirSync(parserDir)) {
   if (file.endsWith('.js')) {
-    parsers[file.replace('.js', '')] = require(path.join(parserDir, file));
+    const name = file.replace('.js', '');
+    parsers[name] = require(path.join(parserDir, file));
+    console.log(`Loaded parser: ${name}`);
   }
 }
 
-const app = express();
-app.use(express.json({ limit: '1mb' }));
-app.use(express.urlencoded({ extended: true, limit: '1mb' }));
-
-// Health check
-app.get('/health', (req, res) => res.json({ status: 'ok', sources: Object.keys(parsers) }));
-
 // Webhook endpoints
-for (const [source, parser] of Object.entries(parsers)) {
-  app.post(`/webhook/${source}`, async (req, res) => {
-    const body = req.body;
-    console.log(`[${source}] Received webhook`);
+app.post('/webhook/:source', async (req, res) => {
+  const source = req.params.source;
+  const parser = parsers[source];
+  if (!parser) return res.status(404).json({ error: `Unknown source: ${source}` });
+  
+  try {
+    const embeds = parser.parse(req.body, config);
+    const defaultRoute = config.sources?.[source]?.route || 'daily';
+    await discord.send(embeds, defaultRoute);
+    res.json({ ok: true, sent: embeds.length });
+  } catch (err) {
+    console.error(`Error processing ${source}:`, err);
+    res.status(500).json({ error: err.message });
+  }
+});
 
-    try {
-      const sourceConfig = config.sources?.[source] || {};
-      const results = parser(body, sourceConfig);
-
-      for (const result of results) {
-        const webhookUrl = config.discord?.[result.route];
-        if (!webhookUrl || webhookUrl === 'PASTE_YOUR_WEBHOOK_HERE') {
-          console.warn(`[${source}] No webhook configured for route: ${result.route}`);
-          continue;
-        }
-        await sendEmbed(webhookUrl, result.embed);
-        console.log(`[${source}] Sent to ${result.route}: ${result.embed.title}`);
-      }
-
-      res.status(200).json({ ok: true, sent: results.length });
-    } catch (err) {
-      console.error(`[${source}] Error:`, err.message);
-      res.status(500).json({ error: err.message });
-    }
-  });
-}
-
-// Catch-all for unknown sources
-app.post('/webhook/:source', (req, res) => {
-  console.warn(`[unknown] No parser for source: ${req.params.source}`);
-  res.status(404).json({ error: `Unknown source: ${req.params.source}` });
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', sources: Object.keys(parsers) });
 });
 
 const port = config.port || 3080;
-app.listen(port, '0.0.0.0', () => {
-  console.log(`DiscoRelay listening on :${port}`);
-  console.log(`Sources: ${Object.keys(parsers).join(', ')}`);
-});
+app.listen(port, () => console.log(`DiscoRelay listening on port ${port}`));
