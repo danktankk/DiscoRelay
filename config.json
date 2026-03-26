@@ -3,7 +3,8 @@
     "critical": "PASTE_YOUR_WEBHOOK_HERE",
     "warning": "PASTE_YOUR_WEBHOOK_HERE",
     "daily": "PASTE_YOUR_WEBHOOK_HERE",
-    "media": "PASTE_YOUR_WEBHOOK_HERE"
+    "media": "PASTE_YOUR_WEBHOOK_HERE",
+    "backups": "PASTE_YOUR_WEBHOOK_HERE"
   },
   "port": 3080,
   "sources": {
@@ -38,7 +39,7 @@
       "icon": "https://raw.githubusercontent.com/Tautulli/Tautulli/master/data/interfaces/default/images/logo-circle.png"
     },
     "backrest": {
-      "route": "auto",
+      "route": "backups",
       "color": "#4A90D9",
       "icon": "https://raw.githubusercontent.com/garethgeorge/backrest/main/webui/public/favicon.ico"
     },
