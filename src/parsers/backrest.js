@@ -6,12 +6,13 @@ module.exports = {
     const repo = body.repo || '';
     const task = body.task || '';
     const snapshot = body.snapshot || '';
+    const hasError = body.has_error || body.error || false;
     const error = body.error || '';
     const time = body.time || '';
     const stats = body.stats || {};
 
     // Success/failure — big and obvious
-    const isError = !!error || event.toLowerCase().includes('error') || event.toLowerCase().includes('fail');
+    const isError = !!hasError || event.toLowerCase().includes('error') || event.toLowerCase().includes('fail');
     const isWarning = event.toLowerCase().includes('warning') || event.toLowerCase().includes('warn');
     const isSuccess = !isError && !isWarning;
 
