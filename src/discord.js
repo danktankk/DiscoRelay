@@ -22,6 +22,7 @@ class DiscordSender {
 
       const payload = JSON.stringify({ embeds: [embed] });
       console.log(`Sending to ${route}: ${embed.title || 'no title'}`);
+      if (process.env.DEBUG) console.log('Embed:', JSON.stringify(embed, null, 2));
       await this._post(webhookUrl, payload);
     }
   }
