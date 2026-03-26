@@ -1,0 +1,51 @@
+{
+  "discord": {
+    "critical": "PASTE_YOUR_WEBHOOK_HERE",
+    "warning": "PASTE_YOUR_WEBHOOK_HERE",
+    "daily": "PASTE_YOUR_WEBHOOK_HERE",
+    "media": "PASTE_YOUR_WEBHOOK_HERE"
+  },
+  "port": 3080,
+  "sources": {
+    "grafana": {
+      "route": "auto",
+      "color": {
+        "critical": "#DC2626",
+        "warning": "#F59E0B",
+        "resolved": "#22C55E",
+        "info": "#3B82F6"
+      },
+      "icon": "https://raw.githubusercontent.com/grafana/grafana/main/public/img/grafana_icon.svg"
+    },
+    "radarr": {
+      "route": "media",
+      "color": "#FFA500",
+      "icon": "https://raw.githubusercontent.com/Radarr/Radarr/develop/Logo/256.png"
+    },
+    "sonarr": {
+      "route": "media",
+      "color": "#00BFFF",
+      "icon": "https://raw.githubusercontent.com/Sonarr/Sonarr/develop/Logo/256.png"
+    },
+    "lidarr": {
+      "route": "media",
+      "color": "#00FF00",
+      "icon": "https://raw.githubusercontent.com/Lidarr/Lidarr/develop/Logo/256.png"
+    },
+    "tautulli": {
+      "route": "media",
+      "color": "#CC7B19",
+      "icon": "https://raw.githubusercontent.com/Tautulli/Tautulli/master/data/interfaces/default/images/logo-circle.png"
+    },
+    "backrest": {
+      "route": "auto",
+      "color": "#4A90D9",
+      "icon": "https://raw.githubusercontent.com/garethgeorge/backrest/main/webui/public/favicon.ico"
+    },
+    "uptimekuma": {
+      "route": "auto",
+      "color": "#5CDD8B",
+      "icon": "https://raw.githubusercontent.com/louislam/uptime-kuma/master/public/icon.png"
+    }
+  }
+}
