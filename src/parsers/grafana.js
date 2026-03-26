@@ -21,8 +21,8 @@ module.exports = {
           { name: 'Severity', value: severity.toUpperCase(), inline: true },
           { name: 'Status', value: firing ? '🔴 FIRING' : '🟢 RESOLVED', inline: true }
         ],
-        thumbnail: { url: config.sources?.grafana?.icon || '' },
-        footer: { text: `Grafana • ${alert.labels?.grafana_folder || 'Alerts'}` },
+        author: config.sources?.grafana?.icon ? { name: 'Grafana', icon_url: config.sources.grafana.icon } : undefined,
+        footer: { text: alert.labels?.grafana_folder || 'Alerts' },
         timestamp: new Date().toISOString(),
         route: severity === 'critical' ? 'critical' : 'warning'
       });
