@@ -10,15 +10,31 @@ class DiscordSender {
     for (const embed of embeds) {
       const route = embed.route || defaultRoute || 'daily';
       delete embed.route;
-      
+
+      // Clean undefined/null/empty values — Discord API rejects them
+      this._clean(embed);
+
       const webhookUrl = this.webhooks[route];
       if (!webhookUrl) {
         console.error(`No webhook for route: ${route}`);
         continue;
       }
-      
+
       const payload = JSON.stringify({ embeds: [embed] });
+      console.log(`Sending to ${route}: ${embed.title || 'no title'}`);
       await this._post(webhookUrl, payload);
+    }
+  }
+
+  _clean(obj) {
+    for (const key of Object.keys(obj)) {
+      if (obj[key] === undefined || obj[key] === null || obj[key] === '') {
+        delete obj[key];
+      } else if (typeof obj[key] === 'object' && !Array.isArray(obj[key])) {
+        this._clean(obj[key]);
+        // Remove empty objects (e.g. thumbnail: {} after cleaning)
+        if (Object.keys(obj[key]).length === 0) delete obj[key];
+      }
     }
   }
 
@@ -26,7 +42,7 @@ class DiscordSender {
     return new Promise((resolve, reject) => {
       const parsed = new URL(url);
       const lib = parsed.protocol === 'https:' ? https : http;
-      
+
       const req = lib.request({
         hostname: parsed.hostname,
         path: parsed.pathname + parsed.search,

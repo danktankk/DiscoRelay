@@ -19,7 +19,7 @@ module.exports = {
       description: isDown ? `⚠️ ${msg || 'Service unreachable'}` : `✅ Service recovered`,
       color: parseInt(isDown ? '#DC2626' : '#22C55E', 16),
       fields,
-      thumbnail: { url: config.sources?.uptimekuma?.icon || '' },
+      author: config.sources?.uptimekuma?.icon ? { name: 'Uptime Kuma', icon_url: config.sources.uptimekuma.icon } : undefined,
       footer: { text: 'Uptime Kuma' },
       timestamp: new Date().toISOString(),
       route: isDown ? 'critical' : 'daily'

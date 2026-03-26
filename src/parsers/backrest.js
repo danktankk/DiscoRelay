@@ -21,7 +21,7 @@ module.exports = {
       description: summary || undefined,
       color: parseInt(success ? '#22C55E' : '#DC2626', 16),
       fields,
-      thumbnail: { url: config.sources?.backrest?.icon || '' },
+      author: config.sources?.backrest?.icon ? { name: 'Backrest', icon_url: config.sources.backrest.icon } : undefined,
       footer: { text: 'Backrest' },
       timestamp: new Date().toISOString(),
       route: success ? 'daily' : 'critical'
