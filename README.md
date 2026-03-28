@@ -1,4 +1,4 @@
-<p align="center">
+<p align="right">
   <img src="images/head1.png" alt="DiscoRelay Banner" width="100%">
 </p>
 
