@@ -1,8 +1,8 @@
 # DiscoRelay
 
-Lightweight Discord webhook notification relay. Receives webhooks from your services, formats them into clean Discord embeds, and routes them to the right channel.
+Lightweight Discord webhook notification relay that keeps your data private. Receives webhooks from your services, formats them into clean Discord embeds, and routes them to the right channel.
 
-> **Lightweight Discord webhook relay that improves formatting and presentation of notifications. Not intended to replace [Notifiarr](https://github.com/Notifiarr)—if you want the most polished appearance and actively maintained solution, [Notifiarr](https://github.com/Notifiarr) remains the better choice.**
+> **Not intended to replace [Notifiarr](https://github.com/Notifiarr). If you want the most polished appearance and actively maintained solution, [Notifiarr](https://github.com/Notifiarr) is the better choice.**
 
 ## Supported Sources
 
