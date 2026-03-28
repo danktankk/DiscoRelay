@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="images/banner.png" alt="DiscoRelay Banner" width="100%">
+  <img src="images/head.png" alt="DiscoRelay Banner" width="100%">
 </p>
 
 <p align="center">
