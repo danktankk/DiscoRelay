@@ -1,8 +1,8 @@
-<p align="right">
+<p align="center">
   <img src="images/head1.png" alt="DiscoRelay Banner" width="100%">
 </p>
 
-<p align="center">
+<p align="right">
   <img src="https://img.shields.io/badge/status-alpha-red" />
   <img src="https://img.shields.io/badge/docker-compose-blue" />
   <img src="https://img.shields.io/badge/license-AGPL--3.0-blue" />
