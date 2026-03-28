@@ -1,4 +1,6 @@
-# DiscoRelay
+<p align="center">
+  <img src="image/discorelay.png" alt="ChronoLens Banner" width="100%">
+</p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/status-alpha-red" />
