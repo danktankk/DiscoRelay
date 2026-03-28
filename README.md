@@ -1,5 +1,11 @@
 # DiscoRelay
 
+<p align="center">
+  <img src="https://img.shields.io/badge/status-alpha-red" />
+  <img src="https://img.shields.io/badge/docker-compose-blue" />
+  <img src="https://img.shields.io/badge/license-AGPL--3.0-blue" />
+</p>
+
 Lightweight Discord webhook notification relay that keeps your data private. Receives webhooks from your services, formats them into clean Discord embeds, and routes them to the right channel.
 
 > **Not intended to replace [Notifiarr](https://github.com/Notifiarr). If you want the most polished appearance and actively maintained solution, [Notifiarr](https://github.com/Notifiarr) is the better choice.**
