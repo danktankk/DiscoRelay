@@ -4,7 +4,8 @@
     "warning": "PASTE_YOUR_WEBHOOK_HERE",
     "daily": "PASTE_YOUR_WEBHOOK_HERE",
     "media": "PASTE_YOUR_WEBHOOK_HERE",
-    "backups": "PASTE_YOUR_WEBHOOK_HERE"
+    "backups": "PASTE_YOUR_WEBHOOK_HERE",
+    "updates": "PASTE_YOUR_WEBHOOK_HERE"
   },
   "port": 3080,
   "sources": {
@@ -39,7 +40,7 @@
       "icon": "https://raw.githubusercontent.com/Tautulli/Tautulli/master/data/interfaces/default/images/logo-circle.png"
     },
     "backrest": {
-      "route": "backups",
+      "route": "auto",
       "color": "#4A90D9",
       "icon": "https://raw.githubusercontent.com/garethgeorge/backrest/main/webui/public/favicon.ico"
     },
@@ -47,6 +48,33 @@
       "route": "auto",
       "color": "#5CDD8B",
       "icon": "https://raw.githubusercontent.com/louislam/uptime-kuma/master/public/icon.png"
+    },
+    "homeassistant": {
+      "route": "auto",
+      "color": {
+        "critical": "#DC2626",
+        "warning": "#F59E0B",
+        "recovery": "#22C55E",
+        "info": "#3B82F6"
+      },
+      "icon": "https://raw.githubusercontent.com/home-assistant/assets/master/logo/logo-pretty.png"
+    },
+    "unraid": {
+      "route": "auto",
+      "color": {
+        "alert": "#E23636",
+        "warning": "#FFAA2C",
+        "normal": "#0099FF"
+      },
+      "icon": "https://craftassets.unraid.net/uploads/logos/un-mark-gradient@2x.png"
+    },
+    "check4updates": {
+      "route": "auto",
+      "color": {
+        "updates": "#FFAA2C",
+        "current": "#2ECC71"
+      },
+      "icon": "https://pix.yourl.pro/i/304f2df3-911d-4ab5-9f47-b3b4ea808e2e.png"
     }
   }
 }
