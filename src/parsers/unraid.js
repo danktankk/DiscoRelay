@@ -1,7 +1,9 @@
+const { etTime } = require('../utils');
+
 module.exports = {
   name: 'UnRAID',
   parse(body, config) {
-    const event = body.event || 'Unraid Status';
+    const event = body.event || 'Notification';
     const subject = body.subject || 'Notification';
     const description = body.description || '';
     const content = body.content || '';
@@ -9,26 +11,21 @@ module.exports = {
     const link = body.link || '';
     const hostname = body.hostname || 'UnRAID';
 
-    // Map importance to colors and status
-    let color, statusIcon, route;
+    let color, route;
     switch (importance) {
       case 'alert':
         color = 0xE23636;
-        statusIcon = '🚨';
         route = 'critical';
         break;
       case 'warning':
         color = 0xFFAA2C;
-        statusIcon = '⚠️';
         route = 'warning';
         break;
       default:
-        color = 0x39208;
-        statusIcon = 'ℹ️';
+        color = 0x0099FF;
         route = 'daily';
     }
 
-    // Build description from description + content
     const parts = [];
     if (description) parts.push(description);
     if (content) parts.push(content);
@@ -36,17 +33,18 @@ module.exports = {
 
     const fields = [];
     fields.push({ name: 'Priority', value: importance, inline: true });
-    if (link) fields.push({ name: 'Link', value: `[Open →](${link})`, inline: true });
+    fields.push({ name: 'Event', value: event, inline: true });
+    if (link) fields.push({ name: 'Link', value: '[Open \u2192](' + link + ')', inline: true });
 
-    const sourceIcon = config.sources?.unraid?.icon || 'https://craftassets.unraid.net/uploads/logos/un-mark-gradient@2x.png';
+    const sourceIcon = config.sources?.unraid?.icon || '';
 
     return [{
-      author: { name: hostname, icon_url: sourceIcon },
-      title: `${statusIcon} ${event}: ${subject}`,
+      author: sourceIcon ? { name: hostname, icon_url: sourceIcon } : { name: hostname },
+      title: subject,
       description: fullDesc,
       color,
       fields,
-      footer: { text: `UnRAID  ·  ${new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}` },
+      footer: { text: `UnRAID  \u00B7  ${etTime()}` },
       timestamp: new Date().toISOString(),
       route
     }];
