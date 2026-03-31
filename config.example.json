@@ -75,6 +75,20 @@
         "current": "#2ECC71"
       },
       "icon": "https://pix.yourl.pro/i/304f2df3-911d-4ab5-9f47-b3b4ea808e2e.png"
+    },
+    "crowdsec": {
+      "route": "warning",
+      "color": "#DC2626",
+      "icon": "https://raw.githubusercontent.com/crowdsecurity/crowdsec-docs/main/crowdsec-docs/static/img/crowdsec_logo.png"
+    },
+    "unifi": {
+      "route": "auto",
+      "color": {
+        "critical": "#DC2626",
+        "warning": "#F59E0B",
+        "info": "#3498DB"
+      },
+      "icon": "https://raw.githubusercontent.com/homebridge/branding/latest/logos/homebridge-unifi.png"
     }
   }
 }

@@ -1,4 +1,4 @@
-const { getImageUrl, formatQuality, formatSize } = require('../utils');
+const { getImageUrl, formatQuality, formatSize, etTime } = require('../utils');
 
 module.exports = {
   name: 'Radarr',
@@ -6,49 +6,97 @@ module.exports = {
     const event = body.eventType || 'Unknown';
     const movie = body.movie || body.remoteMovie || {};
     const release = body.release || {};
+    const movieFile = body.movieFile || {};
     const title = movie.title || 'Unknown Movie';
     const year = movie.year || '';
-    const quality = formatQuality(release.quality || body.movieFile?.quality);
-    const size = formatSize(release.size || body.movieFile?.size);
+    const quality = formatQuality(release.quality || movieFile.quality);
+    const size = formatSize(release.size || movieFile.size);
     const overview = movie.overview || '';
     const tmdbId = movie.tmdbId || body.remoteMovie?.tmdbId || '';
     const imdbId = movie.imdbId || body.remoteMovie?.imdbId || '';
+    const genres = (movie.genres || []).join(', ');
+    const runtime = movie.runtime ? `${movie.runtime}m` : '';
+    const rating = movie.ratings?.tmdb?.value || movie.ratings?.imdb?.value || '';
+    const releaseTitle = release.releaseTitle || movieFile.relativePath || '';
+    const indexer = release.indexer || '';
+    const downloadClient = body.downloadClient || '';
+    const customFormats = body.customFormatInfo?.customFormats || [];
+    const customFormatScore = body.customFormatInfo?.customFormatScore;
 
-    // Poster image — try movie.images, fall back to TMDB poster URL
     const images = movie.images || [];
     let poster = getImageUrl(images, 'poster');
-    if (!poster && tmdbId) {
-      poster = `https://image.tmdb.org/t/p/w500/${tmdbId}.jpg`; // May not resolve, but worth trying
-    }
     const fanart = getImageUrl(images, 'fanart');
 
-    const icons = { Grab: '📥', Download: '✅', Rename: '📝', MovieDelete: '🗑️', MovieFileDelete: '🗑️', Health: '⚠️', Test: '🧪' };
-    const icon = icons[event] || '🎬';
+    const eventLabels = {
+      Grab: 'Grabbed', Download: 'Imported', Rename: 'Renamed',
+      MovieDelete: 'Deleted', MovieFileDelete: 'File Deleted',
+      MovieAdded: 'Added', Health: 'Health Check',
+      ApplicationUpdate: 'Updated', Test: 'Test'
+    };
+    const label = eventLabels[event] || event;
 
-    const fields = [];
-    if (quality) fields.push({ name: 'Quality', value: quality, inline: true });
-    if (size) fields.push({ name: 'Size', value: size, inline: true });
-    if (release.indexer) fields.push({ name: 'Indexer', value: release.indexer, inline: true });
-
-    const links = [];
-    if (tmdbId) links.push(`[TMDB](https://www.themoviedb.org/movie/${tmdbId})`);
-    if (imdbId) links.push(`[IMDb](https://www.imdb.com/title/${imdbId})`);
-
-    const desc = [overview.substring(0, 300)];
-    if (links.length) desc.push(links.join(' • '));
+    // Notifiarr-style color per event
+    const eventColors = {
+      Grab: 0x3498DB, Download: 0x2ECC71, Rename: 0x9B59B6,
+      MovieDelete: 0xE74C3C, MovieFileDelete: 0xE74C3C,
+      MovieAdded: 0x1ABC9C, Health: 0xF39C12,
+      ApplicationUpdate: 0x3498DB, Test: 0x95A5A6
+    };
+    const color = eventColors[event] || 0xFFA500;
 
     const sourceIcon = config.sources?.radarr?.icon || '';
 
+    // Build Notifiarr-style fields — inline triplets
+    const fields = [];
+
+    if (rating || quality || runtime) {
+      if (rating) fields.push({ name: 'Rating', value: String(rating), inline: true });
+      if (quality) fields.push({ name: 'Quality', value: quality, inline: true });
+      if (runtime) fields.push({ name: 'Runtime', value: runtime, inline: true });
+    }
+
+    if (size || indexer || downloadClient) {
+      if (size) fields.push({ name: 'Size', value: size, inline: true });
+      if (indexer) fields.push({ name: 'Indexer', value: indexer, inline: true });
+      if (downloadClient) fields.push({ name: 'Download Client', value: downloadClient, inline: true });
+    }
+
+    if (overview) {
+      fields.push({ name: 'Overview', value: overview.substring(0, 300), inline: false });
+    }
+
+    if (genres) {
+      fields.push({ name: 'Genres', value: genres, inline: false });
+    }
+
+    // Links — Notifiarr style
+    const links = [];
+    if (tmdbId) links.push(`[TMDb](https://www.themoviedb.org/movie/${tmdbId})`);
+    if (imdbId) links.push(`[IMDb](https://www.imdb.com/title/${imdbId})`);
+    if (links.length) fields.push({ name: 'Links', value: links.join(' - '), inline: true });
+
+    // Custom formats in code block
+    if (customFormats.length) {
+      const cfLines = [];
+      if (customFormatScore != null) cfLines.push(`Score : ${customFormatScore}`);
+      cfLines.push(`Format: ${customFormats.map(f => f.name).join(', ')}`);
+      fields.push({ name: 'Custom Formats', value: '```\n' + cfLines.join('\n') + '\n```', inline: false });
+    }
+
+    // Release name in code block
+    if (releaseTitle && (event === 'Grab' || event === 'Download')) {
+      fields.push({ name: 'Release', value: '`' + releaseTitle.substring(0, 200) + '`', inline: false });
+    }
+
     return [{
-      author: sourceIcon ? { name: 'Radarr', icon_url: sourceIcon } : undefined,
-      title: `${icon} ${title}${year ? ` (${year})` : ''}`,
+      author: sourceIcon ? { name: `${label} — Radarr`, icon_url: sourceIcon } : { name: `${label} — Radarr` },
+      title: `${title}${year ? ` (${year})` : ''}`,
       url: tmdbId ? `https://www.themoviedb.org/movie/${tmdbId}` : undefined,
-      description: desc.filter(Boolean).join('\n\n'),
-      color: parseInt((config.sources?.radarr?.color || '#FFA500').replace('#', ''), 16),
+      color,
       fields,
       thumbnail: poster ? { url: poster } : undefined,
       image: fanart ? { url: fanart } : undefined,
-      footer: { text: event },
+      footer: { text: etTime() },
       timestamp: new Date().toISOString(),
       route: 'media'
     }];

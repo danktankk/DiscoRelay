@@ -1,3 +1,5 @@
+const { etTime } = require('../utils');
+
 module.exports = {
   name: 'check4updates',
   parse(body, config) {
@@ -14,48 +16,43 @@ module.exports = {
 
     const lines = [];
 
-    // Updates section — prominent
     if (updates.length > 0) {
-      lines.push(`### ⚠️ Updates Available (${updates.length})`);
+      lines.push(`### Updates Available (${updates.length})`);
       for (const s of updates) {
-        lines.push(`> 🔸 **${s.service}** \`${s.current_digest}\` → \`${s.remote_digest}\``);
-        lines.push(`>    ᴘʀᴏᴊᴇᴄᴛ ${s.project}`);
+        lines.push(`> **${s.service}** \`${s.current_digest}\` \u2192 \`${s.remote_digest}\``);
+        if (s.project) lines.push(`>    ${s.project}`);
       }
       lines.push('');
     }
 
-    // Up to date — compact list
     if (current.length > 0) {
-      lines.push(`### ✅ Up to Date (${current.length})`);
+      lines.push(`### Up to Date (${current.length})`);
       const names = current.map(s => `\`${s.service}\``);
-      // Wrap into rows of ~6 for readability
       for (let i = 0; i < names.length; i += 6) {
-        lines.push('> ' + names.slice(i, i + 6).join(' · '));
+        lines.push('> ' + names.slice(i, i + 6).join(' \u00B7 '));
       }
       lines.push('');
     }
 
-    // Other statuses (REMOTE UNAVAILABLE etc)
     if (other.length > 0) {
-      lines.push(`### ❓ Other (${other.length})`);
+      lines.push(`### Other (${other.length})`);
       for (const s of other) {
-        lines.push(`> \`${s.service}\` — ${s.status}`);
+        lines.push(`> \`${s.service}\` \u2014 ${s.status}`);
       }
     }
 
     const description = lines.join('\n').substring(0, 4090);
     const color = hasUpdates ? 0xFFAA2C : 0x2ECC71;
-    const statusIcon = hasUpdates ? '⚠️' : '✅';
     const sourceIcon = config.sources?.check4updates?.icon || footerIconUrl;
 
     return [{
-      author: avatarUrl ? { name: `check4updates.sh (${hostname})`, icon_url: avatarUrl } : undefined,
-      title: `${statusIcon} ${hostname} — ${hasUpdates ? updates.length + ' update' + (updates.length > 1 ? 's' : '') + ' available' : 'all up to date'}`,
+      author: avatarUrl ? { name: `check4updates (${hostname})`, icon_url: avatarUrl } : { name: `check4updates (${hostname})` },
+      title: `${hostname} \u2014 ${hasUpdates ? updates.length + ' update' + (updates.length > 1 ? 's' : '') + ' available' : 'all up to date'}`,
       description,
       color,
       thumbnail: thumbnailUrl ? { url: thumbnailUrl } : undefined,
       footer: {
-        text: `${current.length} current · ${updates.length} updates · ${other.length} other`,
+        text: `${current.length} current \u00B7 ${updates.length} updates \u00B7 ${other.length} other  \u2014  ${etTime()}`,
         icon_url: sourceIcon || undefined
       },
       timestamp: new Date().toISOString(),

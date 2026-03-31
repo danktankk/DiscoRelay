@@ -4,7 +4,6 @@
 
 /**
  * Extract poster/cover image URL from an images array.
- * Handles case-insensitive coverType matching and falls back through remoteUrl → url (http only).
  */
 function getImageUrl(images, coverType = 'poster') {
   if (!Array.isArray(images) || !images.length) return '';
@@ -18,16 +17,13 @@ function getImageUrl(images, coverType = 'poster') {
 
 /**
  * Format quality from Radarr/Sonarr/Lidarr webhook payloads.
- * Handles string, nested object {quality: {name: "..."}}, or {name: "..."}.
  */
 function formatQuality(q) {
   if (!q) return '';
   if (typeof q === 'string') return q;
   if (typeof q === 'object') {
-    // Radarr/Sonarr: {quality: {name: "Bluray-1080p"}, revision: {version: 1}}
     if (q.quality?.name) return q.quality.name;
     if (q.name) return q.name;
-    // Last resort: try to stringify meaningfully
     return '';
   }
   return String(q);
@@ -42,4 +38,15 @@ function formatSize(bytes) {
   return gb >= 1 ? `${gb.toFixed(1)} GB` : `${(bytes / 1048576).toFixed(0)} MB`;
 }
 
-module.exports = { getImageUrl, formatQuality, formatSize };
+/**
+ * Return current Eastern Time as a formatted string for embed footers.
+ */
+function etTime() {
+  return new Date().toLocaleString('en-US', {
+    timeZone: 'America/New_York',
+    month: 'numeric', day: 'numeric', year: 'numeric',
+    hour: '2-digit', minute: '2-digit', hour12: true
+  });
+}
+
+module.exports = { getImageUrl, formatQuality, formatSize, etTime };

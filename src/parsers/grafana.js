@@ -1,3 +1,5 @@
+const { etTime } = require('../utils');
+
 module.exports = {
   name: 'Grafana',
   parse(body, config) {
@@ -20,8 +22,6 @@ module.exports = {
       const containerName = alert.labels?.name || alert.labels?.container_name || '';
       const folder = alert.labels?.grafana_folder || '';
 
-      // Determine the best host identifier
-      // Skip unpoller/exporter scrape target IPs — not the actual device
       let host = '';
       if (nodename) {
         host = nodename;
@@ -31,24 +31,14 @@ module.exports = {
         host = containerName;
       }
 
-      const statusEmoji = firing ? (severity === 'critical' ? '\u{1F6A8}' : '\u26A0\uFE0F') : '\u2705';
       const statusText = firing ? (severity === 'critical' ? 'CRITICAL' : 'WARNING') : 'RESOLVED';
-
-      // Title: clear and different for firing vs resolved
-      let title;
-      if (firing) {
-        title = statusEmoji + ' ' + alertName;
-      } else {
-        title = '\u2705 ' + alertName + ' \u2014 Resolved';
-      }
+      const authorLabel = firing ? statusText : 'Resolved';
 
       // Build description
       const lines = [];
-
       if (firing) {
         if (summary) lines.push(summary);
       } else {
-        // For resolved, pull the RESOLVED text from description
         if (description && description.includes('RESOLVED')) {
           const resolvedPart = description.split('RESOLVED')[1];
           if (resolvedPart) {
@@ -65,41 +55,34 @@ module.exports = {
         }
       }
 
-      lines.push('');
+      // Fields — Notifiarr style inline triplets
+      const fields = [];
+      if (host) fields.push({ name: 'Host', value: '`' + host + '`', inline: true });
+      fields.push({ name: 'Status', value: '**' + statusText + '**', inline: true });
+      if (folder) fields.push({ name: 'Folder', value: folder, inline: true });
 
-      // Metadata
-      const meta = [];
-      if (host) meta.push('`' + host + '`');
-      meta.push('**' + statusText + '**');
-      if (meta.length) lines.push(meta.join('  \u00B7  '));
-
-      // Extra context — skip noise
       const extras = [];
       if (alert.labels?.site_name && alert.labels.site_name !== 'Default (default)') {
-        extras.push('\u{1F310} ' + alert.labels.site_name);
+        extras.push({ name: 'Site', value: alert.labels.site_name, inline: true });
       }
       if (alert.labels?.job && !['node', 'unpoller', 'prometheus'].includes(alert.labels.job)) {
-        extras.push('\u2699\uFE0F ' + alert.labels.job);
+        extras.push({ name: 'Job', value: alert.labels.job, inline: true });
       }
-      if (extras.length) lines.push(extras.join('  \u00B7  '));
+      fields.push(...extras);
 
-      // Grafana link — only for firing alerts
       if (firing && alert.generatorURL) {
-        lines.push('');
-        lines.push('[View in Grafana \u2192](' + alert.generatorURL + ')');
+        fields.push({ name: 'Link', value: '[View in Grafana \u2192](' + alert.generatorURL + ')', inline: false });
       }
 
       const sourceIcon = config.sources?.grafana?.icon || '';
 
-      const footerStatus = firing ? '\u{1F534}' : '\u{1F7E2}';
-      const timeStr = new Date().toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: '2-digit', minute: '2-digit', hour12: true });
-
       embeds.push({
-        author: sourceIcon ? { name: 'Grafana', icon_url: sourceIcon } : undefined,
-        title,
+        author: sourceIcon ? { name: `${authorLabel} — Grafana`, icon_url: sourceIcon } : { name: `${authorLabel} — Grafana` },
+        title: alertName,
         description: lines.join('\n'),
         color: parseInt(color.replace('#', ''), 16),
-        footer: { text: footerStatus + ' ' + statusText + '  \u00B7  ' + timeStr },
+        fields,
+        footer: { text: etTime() },
         timestamp: new Date().toISOString(),
         route: severity === 'critical' ? 'critical' : 'warning'
       });
