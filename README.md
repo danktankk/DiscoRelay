@@ -23,6 +23,9 @@ A lightweight Discord webhook notification relay that keeps your data private. R
 | Tautulli | `/webhook/tautulli` | media |
 | Backrest | `/webhook/backrest` | critical (fail) / daily (success) |
 | Uptime Kuma | `/webhook/uptimekuma` | critical (down) / daily (up) |
+| Home Assistant | `/webhook/homeassistant` | critical/warning/daily (auto by severity) |
+| UnRAID | `/webhook/unraid` | critical/warning/daily (auto by severity) |
+| check4updates | `/webhook/check4updates` | updates (available) / daily (current) |
 
 ## Setup
 
@@ -39,6 +42,8 @@ Edit `config.json`:
 - `discord.warning` — webhook URL for warnings
 - `discord.daily` — webhook URL for daily/resolved notifications
 - `discord.media` — webhook URL for media notifications
+- `discord.backups` — webhook URL for backup notifications
+- `discord.updates` — webhook URL for update notifications
 - `port` — server port (default 3080)
 
 ## Service Configuration
@@ -59,6 +64,15 @@ Settings → Notifications → Webhook → URL: `http://discorelay:3080/webhook/
 
 ### Uptime Kuma
 Settings → Notifications → Webhook → URL: `http://discorelay:3080/webhook/uptimekuma`
+
+### Home Assistant
+Automations → Actions → Call Service → RESTful Notification → URL: `http://discorelay:3080/webhook/homeassistant`
+
+### UnRAID
+Community Applications → User Scripts or notification agent → Webhook → URL: `http://discorelay:3080/webhook/unraid`
+
+### check4updates
+Configure the check4updates container webhook to: `http://discorelay:3080/webhook/check4updates`
 
 ## Health Check
 
