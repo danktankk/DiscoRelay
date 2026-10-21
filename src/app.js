@@ -4,7 +4,7 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const { authorize } = require('./auth');
-const { toPayloads, firstTitle } = require('./normalize');
+const { toPayloads, firstTitle, clean } = require('./normalize');
 const { fingerprint } = require('./dedup');
 
 function loadParsers(dir = path.join(__dirname, 'parsers'), log) {
@@ -31,7 +31,30 @@ function testEmbed(route, version) {
   };
 }
 
-function createApp({ config, store, sender, dedup, metrics, log, parsers }) {
+/** Fire-and-forget copy of the raw sender payload to extra consumers (e.g. DIUN → diun-dash). */
+function forwardRaw({ config, source, rawBody, headers, metrics, log, fetchImpl }) {
+  const targets = (config.sources[source] && config.sources[source].forward) || [];
+  if (!Array.isArray(targets) || !targets.length) return;
+  const timeoutMs = (config.delivery && config.delivery.timeout_ms) || 10000;
+  const doFetch = fetchImpl || globalThis.fetch;
+  for (const url of targets) {
+    doFetch(url, {
+      method: 'POST',
+      headers: { 'content-type': headers['content-type'] || 'application/json' },
+      body: typeof rawBody === 'string' ? rawBody : JSON.stringify(rawBody),
+      signal: AbortSignal.timeout(timeoutMs),
+    }).then(res => {
+      const outcome = res.ok ? 'ok' : `http_${res.status}`;
+      metrics.inc('forward_total', { source, outcome });
+      if (!res.ok) log.warn('forward rejected', { source, url, status: res.status });
+    }).catch(err => {
+      metrics.inc('forward_total', { source, outcome: 'error' });
+      log.warn('forward failed', { source, url, error: err && err.message });
+    });
+  }
+}
+
+function createApp({ config, store, sender, dedup, metrics, log, parsers, services = {}, fetchImpl }) {
   const app = express();
   app.disable('x-powered-by');
   app.set('trust proxy', 'loopback, uniquelocal');
@@ -44,8 +67,7 @@ function createApp({ config, store, sender, dedup, metrics, log, parsers }) {
     return res.status(401).json({ error: 'unauthorized', reason: auth.reason });
   };
 
-  app.post('/webhook/:source', async (req, res) => {
-    const source = req.params.source;
+  async function ingest(req, res, source) {
     const parser = parsers[source];
     if (!parser) {
       metrics.inc('rejected_total', { reason: 'unknown_source' });
@@ -55,10 +77,11 @@ function createApp({ config, store, sender, dedup, metrics, log, parsers }) {
     if (!auth.ok) return deny(res, auth, source);
     metrics.inc('received_total', { source });
 
+    const rawBody = req.body;
     let payloads;
     try {
-      const body = typeof req.body === 'string' ? safeJson(req.body) : req.body;
-      const result = parser.parse(body, config, { source, query: req.query, headers: req.headers, ip: req.ip });
+      const body = typeof rawBody === 'string' ? safeJson(rawBody) : rawBody;
+      const result = await parser.parse(body, config, { source, query: req.query, headers: req.headers, ip: req.ip, services });
       const cfgRoute = config.sources[source] && config.sources[source].route;
       const defaultRoute = cfgRoute && cfgRoute !== 'auto' ? cfgRoute : 'daily';
       payloads = toPayloads(result, defaultRoute);
@@ -67,11 +90,13 @@ function createApp({ config, store, sender, dedup, metrics, log, parsers }) {
       log.error('parse failed', { source, ip: req.ip, error: err.message });
       return res.status(400).json({ error: `parse failed: ${err.message}` });
     }
+    forwardRaw({ config, source, rawBody, headers: req.headers, metrics, log, fetchImpl });
     if (!payloads.length) return res.json({ ok: true, queued: 0, suppressed: 0, dropped: 0, ids: [] });
 
     const windowSec = dedup.windowFor(config, source);
     const result = { ok: true, queued: 0, suppressed: 0, dropped: 0, ids: [] };
     for (const p of payloads) {
+      clean(p.body);
       const fp = fingerprint(source, p.body);
       const title = firstTitle(p.body);
       const base = { source, route: p.route, fingerprint: fp, title, body: p.body, requestIp: req.ip };
@@ -100,7 +125,12 @@ function createApp({ config, store, sender, dedup, metrics, log, parsers }) {
     }
     log.info('webhook accepted', { source, ip: req.ip, queued: result.queued, suppressed: result.suppressed, dropped: result.dropped });
     res.status(result.queued ? 202 : 200).json(result);
-  });
+  }
+
+  app.post('/webhook/:source', (req, res) => ingest(req, res, req.params.source));
+  // Notifiarr passthrough-compatible path, so existing scripts only change the host.
+  app.post('/api/v1/notification/passthrough', (req, res) => ingest(req, res, 'notifiarr'));
+  app.post('/api/v1/notification/passthrough/:token', (req, res) => { req.query.token = req.params.token; return ingest(req, res, 'notifiarr'); });
 
   app.get('/health', async (req, res) => {
     let db;
@@ -112,6 +142,7 @@ function createApp({ config, store, sender, dedup, metrics, log, parsers }) {
       sources: Object.keys(parsers),
       routes: Object.keys(config.discord),
       auth: config.auth.required,
+      geoip: !!(config.geoip && config.geoip.enabled !== false),
       queue: sender.depths(),
       db,
     });
@@ -159,4 +190,4 @@ function safeJson(text) {
   try { return JSON.parse(text); } catch { return { message: text }; }
 }
 
-module.exports = { createApp, loadParsers };
+module.exports = { createApp, loadParsers, forwardRaw };

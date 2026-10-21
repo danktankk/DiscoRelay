@@ -17,6 +17,9 @@ A self-hosted Discord notification hub. Every service in your homelab posts to *
 | **One endpoint per source** | `POST /webhook/<source>` with a dedicated parser (CrowdSec, DIUN, Backrest, Graylog, Uptime Kuma, Radarr…) |
 | **Discord passthrough** | Apps with native Discord webhook support point at `/webhook/discord?route=<route>` instead of discord.com. Payload forwarded unchanged, but you still get auth, dedup, retries and history. |
 | **Generic endpoint** | `POST /webhook/generic` with `{ title, message, severity, host, fields }` for scripts, cron jobs and playbooks. Slack-shaped `{ text }` works too. |
+| **Notifiarr passthrough** | `POST /api/v1/notification/passthrough/<token>` (or `/webhook/notifiarr`) accepts the [Notifiarr passthrough schema](https://notifiarr.wiki/pages/integrations/passthrough/) unchanged: title, icon, description, fields, thumbnail, image, color, footer, pings. Scripts written for Notifiarr only change the host. `channels` in config maps a Notifiarr channel id to a route. |
+| **GeoIP + map** | CrowdSec bans get Country / State / City / ISP / ASN from ip-api.com (free tier, cached, rate-limited) and an OpenStreetMap tile of the area. `GEOIP_ENABLED=false` turns it off. |
+| **Fan-out** | `sources.<name>.forward: [urls]` copies the raw sender payload to extra consumers, so one DIUN webhook can feed both Discord and diun-dash. |
 | **Routing** | Six channel routes: `critical`, `warning`, `daily`, `media`, `backups`, `updates`. Parsers pick a route by severity; you can override per source. |
 | **Auth** | Every sender presents a token (`X-Relay-Token` header, `Authorization: Bearer`, or `?token=`). Tokens can be scoped to sources. |
 | **Dedup** | Identical payloads from the same source are sent at most once per window (default 5 min, per-source override, `0` disables). |
@@ -30,6 +33,7 @@ A self-hosted Discord notification hub. Every service in your homelab posts to *
 |--------|----------|-----------|
 | **Any Discord-capable app** | `/webhook/discord?route=<route>` | the route you name |
 | **Anything else** | `/webhook/generic` | by `severity` (critical / error+warning / info) or explicit `route` |
+| **Notifiarr-format scripts** | `/api/v1/notification/passthrough/<token>` | `?route=`, then `channels[ids.channel]`, else daily |
 | CrowdSec | `/webhook/crowdsec` | warning |
 | DIUN | `/webhook/diun` | updates |
 | Graylog | `/webhook/graylog` | by event priority (3 → critical, 2 → warning, 1 → daily) |
@@ -68,6 +72,7 @@ Secrets live only in `.env` (gitignored). `config.json` holds no secrets and may
 | `RETENTION_DAYS` | History retention (default 90) |
 | `DEDUP_WINDOW_SEC` | Default dedup window (default 300) |
 | `METRICS_PUBLIC` | `true` exposes `/metrics` without a token |
+| `GEOIP_ENABLED` | `false` disables ip-api.com lookups and the map tile on CrowdSec bans |
 | `LOG_LEVEL` | `debug` / `info` / `warn` / `error` |
 
 ### Per-source config (`config.json → sources.<name>`)
@@ -82,7 +87,7 @@ Replace `HUB` with the relay's address and `TOKEN` with your relay token.
 
 | Sender | Where | Value |
 |---|---|---|
-| DIUN | `DIUN_NOTIF_WEBHOOK_ENDPOINT` | `http://HUB:3080/webhook/diun?token=TOKEN` (remove the `DIUN_NOTIF_DISCORD_*` vars) |
+| DIUN | `DIUN_NOTIF_WEBHOOK_ENDPOINT` | `http://HUB:3080/webhook/diun?token=TOKEN` (remove the `DIUN_NOTIF_DISCORD_*` vars). Keep a dashboard fed with `sources.diun.forward: ["http://diun-dash:8554/webhook"]`. |
 | CrowdSec | `notifications/discorelay.yaml` (`type: http`) | `url: http://HUB:3080/webhook/crowdsec` + `headers: { X-Relay-Token: TOKEN }` |
 | Backrest | hook `actionCommand` | `curl -s -X POST http://HUB:3080/webhook/backrest -H "X-Relay-Token: TOKEN" …` |
 | Graylog | Alerts → Notifications → HTTP Notification | URL `http://HUB:3080/webhook/graylog?token=TOKEN` |

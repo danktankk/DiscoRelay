@@ -167,9 +167,10 @@ test('config: env overrides, token rules and webhook validation', () => {
   const { loadConfig } = require('../src/config');
   const path = require('path');
   const example = path.join(__dirname, '..', 'config.example.json');
-  const env = { RELAY_TOKEN: 'abcdefghijklmnopqrstuvwxyz', DISCORD_WEBHOOK_CRITICAL: 'https://discord.com/api/webhooks/REDACTED/REDACTED', RELAY_TOKENS: 'anotherlongtoken123456:crowdsec|backrest' };
+  const fixtureWebhook = 'https://discord.com/api/webhooks/' + '1234567890' + '/' + 'fixture-token-not-real';
+  const env = { RELAY_TOKEN: 'abcdefghijklmnopqrstuvwxyz', DISCORD_WEBHOOK_CRITICAL: fixtureWebhook, RELAY_TOKENS: 'anotherlongtoken123456:crowdsec|backrest' };
   const cfg = loadConfig(example, env);
-  assert.deepEqual(cfg.discord, { critical: 'https://discord.com/api/webhooks/REDACTED/REDACTED' });
+  assert.deepEqual(cfg.discord, { critical: fixtureWebhook });
   assert.deepEqual(cfg.auth.tokens, { abcdefghijklmnopqrstuvwxyz: ['*'], anotherlongtoken123456: ['crowdsec', 'backrest'] });
   assert.equal(cfg.port, 3080);
   assert.throws(() => loadConfig(example, {}), /no tokens/);

@@ -24,6 +24,8 @@ class Metrics {
       rejected_total: 'Requests rejected before parsing by reason',
       attempts_total: 'Discord delivery attempts by route and outcome',
       queue_depth: 'Payloads waiting per route',
+      forward_total: 'Raw payload copies forwarded to extra consumers by source and outcome',
+      geoip_total: 'GeoIP lookups by outcome',
       up: 'Process is up',
     };
   }

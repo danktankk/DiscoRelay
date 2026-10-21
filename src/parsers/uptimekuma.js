@@ -1,53 +1,48 @@
 const { etTime } = require('../utils');
 
+// Uptime Kuma "webhook" notification (JSON): { heartbeat, monitor, msg }
 module.exports = {
   name: 'Uptime Kuma',
   parse(body, config) {
     const heartbeat = body.heartbeat || {};
     const monitor = body.monitor || {};
-    const isDown = heartbeat.status === 0;
+    const status = heartbeat.status; // 0 down, 1 up, 2 pending, 3 maintenance
+    const isDown = status === 0;
+    const isUp = status === 1;
     const name = monitor.name || monitor.hostname || 'Unknown';
-    const url = monitor.url || '';
+    const url = monitor.url || monitor.hostname || '';
     const msg = heartbeat.msg || '';
-    const ping = heartbeat.ping || '';
+    const ping = heartbeat.ping;
     const monitorType = monitor.type || '';
     const method = monitor.method || '';
-    const timeout = monitor.timeout || '';
+    const timeout = monitor.timeout;
     const maintenance = monitor.maintenance ? 'Yes' : 'No';
+    const codes = Array.isArray(monitor.accepted_statuscodes) ? monitor.accepted_statuscodes.join(', ') : '';
+    const cfg = (config.sources && config.sources.uptimekuma) || {};
 
-    const sourceIcon = config.sources?.uptimekuma?.icon || '';
-    const statusText = isDown ? 'Down' : 'Up';
-    const statusLabel = isDown ? `[${name}] Down` : `[${name}] ${msg || 'OK'}`;
+    const badge = isDown ? '🔴 Down' : isUp ? '✅ Up' : status === 3 ? '🛠 Maintenance' : '⏳ Pending';
+    const title = `[${name}] [${badge}] ${msg || (isUp ? 'OK' : '')}`.trim();
 
     const fields = [];
-
-    // Inline triplets — Notifiarr style
-    if (monitorType || method || timeout) {
-      if (monitorType) fields.push({ name: 'Type', value: monitorType, inline: true });
-      if (method) fields.push({ name: 'Method', value: method, inline: true });
-      if (timeout) fields.push({ name: 'Timeout', value: String(timeout), inline: true });
-    }
-
-    if (!isDown && ping) {
-      fields.push({ name: 'Ping', value: `${ping}ms`, inline: true });
-    }
-
+    if (status !== undefined) fields.push({ name: 'Status', value: String(status), inline: true });
+    if (monitorType) fields.push({ name: 'Type', value: monitorType, inline: true });
+    if (method) fields.push({ name: 'Method', value: method, inline: true });
+    if (timeout !== undefined && timeout !== null && timeout !== '') fields.push({ name: 'Timeout', value: String(timeout), inline: true });
     fields.push({ name: 'Maintenance', value: maintenance, inline: true });
+    if (codes) fields.push({ name: 'Codes', value: codes, inline: true });
+    if (isUp && ping !== undefined && ping !== null) fields.push({ name: 'Ping', value: `${ping}ms`, inline: true });
+    if (url) fields.push({ name: 'Link', value: String(url).slice(0, 1024), inline: false });
+    if (isDown && msg) fields.push({ name: 'Error', value: '```\n' + String(msg).slice(0, 1000) + '\n```', inline: false });
 
-    if (url) fields.push({ name: 'Link', value: url, inline: false });
-
-    if (isDown && msg) {
-      fields.push({ name: 'Error', value: '```\n' + msg + '\n```', inline: false });
-    }
-
+    const icon = cfg.icon || '';
     return [{
-      author: sourceIcon ? { name: `Uptime Kuma: ${name}`, icon_url: sourceIcon } : { name: `Uptime Kuma: ${name}` },
-      title: statusLabel,
-      color: isDown ? 0xDC2626 : 0x22C55E,
+      author: icon ? { name: `Uptime Kuma: ${name}`, icon_url: icon } : { name: `Uptime Kuma: ${name}` },
+      title: title.slice(0, 256),
+      color: isDown ? 0xDC2626 : isUp ? 0x22C55E : 0xF59E0B,
       fields,
-      footer: { text: etTime() },
+      footer: { text: `Uptime Kuma  ·  ${etTime()}` },
       timestamp: new Date().toISOString(),
-      route: isDown ? 'critical' : 'daily'
+      route: isDown ? 'critical' : 'daily',
     }];
-  }
+  },
 };

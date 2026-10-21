@@ -30,6 +30,13 @@
   "metrics": {
     "public": false
   },
+  "geoip": {
+    "enabled": true,
+    "map": true,
+    "zoom": 10,
+    "per_minute": 40
+  },
+  "channels": {},
   "sources": {
     "generic": {
       "route": "auto",
@@ -38,9 +45,13 @@
     "discord": {
       "route": "daily"
     },
+    "notifiarr": {
+      "route": "daily"
+    },
     "diun": {
       "route": "updates",
       "dedup_window_sec": 86400,
+      "forward": [],
       "icon": "https://raw.githubusercontent.com/crazy-max/diun/master/.github/diun.png"
     },
     "graylog": {

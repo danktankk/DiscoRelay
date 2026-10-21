@@ -17,6 +17,7 @@ const DEFAULTS = {
   },
   store: { retention_days: 90 },
   metrics: { public: false },
+  geoip: { enabled: true, map: true, zoom: 10, per_minute: 40 },
 };
 
 /**
@@ -43,7 +44,10 @@ function loadConfig(configPath, env = process.env) {
     delivery: { ...DEFAULTS.delivery, ...(raw.delivery || {}) },
     store: { ...DEFAULTS.store, ...(raw.store || {}) },
     metrics: { ...DEFAULTS.metrics, ...(raw.metrics || {}) },
+    geoip: { ...DEFAULTS.geoip, ...(raw.geoip || {}) },
+    channels: { ...(raw.channels || {}) },
   };
+  if (env.GEOIP_ENABLED !== undefined) cfg.geoip.enabled = env.GEOIP_ENABLED !== 'false';
 
   for (const [key, value] of Object.entries(env)) {
     const m = /^DISCORD_WEBHOOK_([A-Z0-9_]+)$/.exec(key);

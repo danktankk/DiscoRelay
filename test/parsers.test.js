@@ -6,15 +6,15 @@ const { toPayloads } = require('../src/normalize');
 
 const config = { discord: { critical: 'x', warning: 'x', daily: 'x', updates: 'x', media: 'x' }, sources: {} };
 
-test('crowdsec: array of decisions → one warning embed per decision with IP link', () => {
+test('crowdsec: array of decisions → one warning embed per decision with IP link', async () => {
   const p = require('../src/parsers/crowdsec');
   const body = [{ ip: '203.0.113.9', scenario: 'Ip/crowdsecurity/ssh-bf', action: 'ban', duration: '4h', scope: 'Ip', origin: 'crowdsec', events_count: 6,
     message: 'IP 203.0.113.9 triggered crowdsecurity/ssh-bf', source: { scope: 'Ip', value: '203.0.113.9', ip: '203.0.113.9', scenario: 'crowdsecurity/ssh-bf' }, labels: { type: 'Ip', service: 'crowdsec' } }];
-  const embeds = p.parse(body, config);
+  const embeds = await p.parse(body, config);
   assert.equal(embeds.length, 1);
   assert.equal(embeds[0].route, 'warning');
   assert.match(embeds[0].title, /Ban on 203\.0\.113\.9/);
-  assert.ok(embeds[0].fields.some(f => f.name === 'IP' && f.value.includes('abuseipdb.com/check/203.0.113.9')));
+  assert.ok(embeds[0].fields.some(f => f.name === 'Details' && f.value.includes('abuseipdb.com/check/203.0.113.9')));
 });
 
 test('diun: update payload → updates route, host and digest shown', () => {
@@ -24,8 +24,9 @@ test('diun: update payload → updates route, host and digest shown', () => {
     metadata: { ctn_names: 'authelia-postgresql-1' } }, config);
   assert.equal(embeds.length, 1);
   assert.equal(embeds[0].route, 'updates');
-  assert.equal(embeds[0].title, 'Update: docker.io/library/postgres:16');
+  assert.equal(embeds[0].title, 'docker.io/library/postgres');
   assert.equal(embeds[0].url, 'https://hub.docker.com/_/postgres');
+  assert.ok(embeds[0].fields.some(f => f.name === 'Tag' && f.value === '`16`'));
   assert.ok(embeds[0].fields.some(f => f.name === 'Host' && f.value === '`host`'));
   assert.ok(embeds[0].fields.some(f => f.name === 'Digest' && f.value === '`0123456789ab`'));
   assert.ok(embeds[0].fields.some(f => f.name === 'Container' && f.value.includes('authelia-postgresql-1')));
@@ -34,7 +35,9 @@ test('diun: update payload → updates route, host and digest shown', () => {
 test('diun: new image → blue, "New" title', () => {
   const p = require('../src/parsers/diun');
   const [e] = p.parse({ status: 'new', image: 'ghcr.io/x/y:1' }, config);
-  assert.equal(e.title, 'New: ghcr.io/x/y:1');
+  assert.equal(e.title, 'ghcr.io/x/y:1');
+  assert.match(e.author.name, /^Image Tracked/);
+  assert.match(e.description, /^Now tracking/);
   assert.equal(e.color, 0x3B82F6);
 });
 
