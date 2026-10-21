@@ -124,6 +124,11 @@ function createApp({ config, store, sender, dedup, metrics, log, parsers, servic
       metrics.inc('queued_total', { route: p.route });
     }
     log.info('webhook accepted', { source, ip: req.ip, queued: result.queued, suppressed: result.suppressed, dropped: result.dropped });
+    if (source === 'discord' && req.query.wait !== 'true') {
+      // Discord itself answers 204 No Content; strict clients (DIUN's Discord notifier) treat anything else as failure.
+      res.set('X-DiscoRelay-Result', `queued=${result.queued} suppressed=${result.suppressed} dropped=${result.dropped}`);
+      return res.status(204).end();
+    }
     res.status(result.queued ? 202 : 200).json(result);
   }
 

@@ -3,7 +3,7 @@
 </p>
 
 <p align="right">
-  <img src="https://img.shields.io/badge/version-2.0.0-blue" />
+  <img src="https://img.shields.io/badge/version-2.1.1-blue" />
   <img src="https://img.shields.io/badge/docker-compose-blue" />
   <img src="https://img.shields.io/badge/license-AGPL--3.0-blue" />
 </p>
@@ -15,7 +15,7 @@ A self-hosted Discord notification hub. Every service in your homelab posts to *
 | | |
 |---|---|
 | **One endpoint per source** | `POST /webhook/<source>` with a dedicated parser (CrowdSec, DIUN, Backrest, Graylog, Uptime Kuma, Radarr…) |
-| **Discord passthrough** | Apps with native Discord webhook support point at `/webhook/discord?route=<route>` instead of discord.com. Payload forwarded unchanged, but you still get auth, dedup, retries and history. |
+| **Discord passthrough** | Apps with native Discord webhook support point at `/webhook/discord?route=<route>` instead of discord.com. Payload forwarded unchanged, but you still get auth, dedup, retries and history. Answers `204 No Content` exactly like Discord (strict clients such as DIUN's Discord notifier need that); add `&wait=true` to get the JSON result instead. |
 | **Generic endpoint** | `POST /webhook/generic` with `{ title, message, severity, host, fields }` for scripts, cron jobs and playbooks. Slack-shaped `{ text }` works too. |
 | **Notifiarr passthrough** | `POST /api/v1/notification/passthrough/<token>` (or `/webhook/notifiarr`) accepts the [Notifiarr passthrough schema](https://notifiarr.wiki/pages/integrations/passthrough/) unchanged: title, icon, description, fields, thumbnail, image, color, footer, pings. Scripts written for Notifiarr only change the host. `channels` in config maps a Notifiarr channel id to a route. |
 | **GeoIP + map** | CrowdSec bans get Country / State / City / ISP / ASN from ip-api.com (free tier, cached, rate-limited) and an OpenStreetMap tile of the area. `GEOIP_ENABLED=false` turns it off. |

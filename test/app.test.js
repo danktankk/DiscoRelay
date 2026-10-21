@@ -53,11 +53,16 @@ test('webhook ingest: auth, routing, delivery, metrics, health', async t => {
   await t.test('passthrough forwards a native Discord payload to ?route=', async () => {
     const before = fake.received.length;
     const r = await app.post('/webhook/discord?route=updates', { content: 'shrike found a release', username: 'shrike' }, auth);
-    assert.equal(r.status, 202);
+    assert.equal(r.status, 204, 'passthrough answers 204 like Discord');
+    assert.equal(r.headers.get('x-discorelay-result'), 'queued=1 suppressed=0 dropped=0');
     await waitDone(app, 1);
     const hit = fake.received[before];
     assert.match(hit.path, /updates-token$/);
     assert.deepEqual(hit.body, { content: 'shrike found a release', username: 'shrike' });
+    const r2 = await app.post('/webhook/discord?route=updates&wait=true', { content: 'with result body', username: 'shrike' }, auth);
+    assert.equal(r2.status, 202);
+    assert.equal((await r2.json()).queued, 1);
+    await waitDone(app, 1);
   });
 
   await t.test('duplicate inside the dedup window is suppressed, distinct payload is not', async () => {
