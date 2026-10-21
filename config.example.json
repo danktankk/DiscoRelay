@@ -118,7 +118,7 @@
         "updates": "#FFAA2C",
         "current": "#2ECC71"
       },
-      "icon": "https://pix.example.org/i/304f2df3-911d-4ab5-9f47-b3b4ea808e2e.png"
+      "icon": ""
     },
     "crowdsec": {
       "route": "warning",
