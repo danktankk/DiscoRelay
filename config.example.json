@@ -1,14 +1,52 @@
 {
-  "discord": {
-    "critical": "PASTE_YOUR_WEBHOOK_HERE",
-    "warning": "PASTE_YOUR_WEBHOOK_HERE",
-    "daily": "PASTE_YOUR_WEBHOOK_HERE",
-    "media": "PASTE_YOUR_WEBHOOK_HERE",
-    "backups": "PASTE_YOUR_WEBHOOK_HERE",
-    "updates": "PASTE_YOUR_WEBHOOK_HERE"
-  },
   "port": 3080,
+  "discord": {
+    "critical": "PASTE_YOUR_WEBHOOK_HERE or set DISCORD_WEBHOOK_CRITICAL",
+    "warning": "PASTE_YOUR_WEBHOOK_HERE or set DISCORD_WEBHOOK_WARNING",
+    "daily": "PASTE_YOUR_WEBHOOK_HERE or set DISCORD_WEBHOOK_DAILY",
+    "media": "PASTE_YOUR_WEBHOOK_HERE or set DISCORD_WEBHOOK_MEDIA",
+    "backups": "PASTE_YOUR_WEBHOOK_HERE or set DISCORD_WEBHOOK_BACKUPS",
+    "updates": "PASTE_YOUR_WEBHOOK_HERE or set DISCORD_WEBHOOK_UPDATES"
+  },
+  "auth": {
+    "required": true,
+    "tokens": {}
+  },
+  "dedup": {
+    "window_sec": 300,
+    "max_entries": 5000
+  },
+  "delivery": {
+    "timeout_ms": 10000,
+    "max_attempts": 5,
+    "backoff_base_ms": 1000,
+    "backoff_max_ms": 30000,
+    "max_rate_limit_waits": 5,
+    "max_rate_limit_wait_ms": 60000
+  },
+  "store": {
+    "retention_days": 90
+  },
+  "metrics": {
+    "public": false
+  },
   "sources": {
+    "generic": {
+      "route": "auto",
+      "icon": ""
+    },
+    "discord": {
+      "route": "daily"
+    },
+    "diun": {
+      "route": "updates",
+      "dedup_window_sec": 86400,
+      "icon": "https://raw.githubusercontent.com/crazy-max/diun/master/.github/diun.png"
+    },
+    "graylog": {
+      "route": "auto",
+      "icon": "https://raw.githubusercontent.com/Graylog2/graylog2-server/master/graylog2-web-interface/public/images/favicon.png"
+    },
     "grafana": {
       "route": "auto",
       "color": {
@@ -21,26 +59,31 @@
     },
     "radarr": {
       "route": "media",
+      "dedup_window_sec": 0,
       "color": "#FFA500",
       "icon": "https://raw.githubusercontent.com/Radarr/Radarr/develop/Logo/256.png"
     },
     "sonarr": {
       "route": "media",
+      "dedup_window_sec": 0,
       "color": "#00BFFF",
       "icon": "https://raw.githubusercontent.com/Sonarr/Sonarr/develop/Logo/256.png"
     },
     "lidarr": {
       "route": "media",
+      "dedup_window_sec": 0,
       "color": "#00FF00",
       "icon": "https://raw.githubusercontent.com/Lidarr/Lidarr/develop/Logo/256.png"
     },
     "tautulli": {
       "route": "media",
+      "dedup_window_sec": 0,
       "color": "#CC7B19",
       "icon": "https://raw.githubusercontent.com/Tautulli/Tautulli/master/data/interfaces/default/images/logo-circle.png"
     },
     "backrest": {
       "route": "auto",
+      "dedup_window_sec": 0,
       "color": "#4A90D9",
       "icon": "https://raw.githubusercontent.com/garethgeorge/backrest/main/webui/public/favicon.ico"
     },
@@ -70,6 +113,7 @@
     },
     "check4updates": {
       "route": "auto",
+      "dedup_window_sec": 0,
       "color": {
         "updates": "#FFAA2C",
         "current": "#2ECC71"
