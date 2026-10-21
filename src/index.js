@@ -1,45 +1,68 @@
-const express = require('express');
-const fs = require('fs');
-const path = require('path');
+'use strict';
+
+const { loadConfig } = require('./config');
+const { makeLogger } = require('./logger');
+const { Metrics } = require('./metrics');
+const { createStore } = require('./store');
+const { Dedup } = require('./dedup');
 const DiscordSender = require('./discord');
+const { createApp, loadParsers } = require('./app');
 
-const configPath = process.env.CONFIG_PATH || path.join(__dirname, '..', 'config.json');
-const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-const discord = new DiscordSender(config);
-const app = express();
-app.use(express.json({ limit: '10mb' }));
+async function main() {
+  const log = makeLogger();
+  const config = loadConfig();
+  const metrics = new Metrics();
+  const store = createStore(config, log);
+  await store.init(); // fail fast: compose restarts us until the database is reachable
 
-// Auto-load parsers
-const parsers = {};
-const parserDir = path.join(__dirname, 'parsers');
-for (const file of fs.readdirSync(parserDir)) {
-  if (file.endsWith('.js')) {
-    const name = file.replace('.js', '');
-    parsers[name] = require(path.join(parserDir, file));
-    console.log(`Loaded parser: ${name}`);
+  const sender = new DiscordSender(config, { store, metrics, log });
+  const dedup = new Dedup({ windowSec: config.dedup.window_sec, maxEntries: config.dedup.max_entries });
+  const parsers = loadParsers(undefined, log);
+  const app = createApp({ config, store, sender, dedup, metrics, log, parsers });
+
+  const server = app.listen(config.port, () => {
+    log.info('DiscoRelay listening', {
+      version: config.version,
+      port: config.port,
+      routes: Object.keys(config.discord),
+      sources: Object.keys(parsers),
+      auth: config.auth.required,
+      history: store.enabled,
+      dedupWindowSec: config.dedup.window_sec,
+    });
+    if (!config.auth.required) log.warn('AUTH DISABLED: any host that can reach this port can post to your Discord');
+  });
+
+  let pruneTimer = null;
+  if (store.enabled) {
+    const prune = () => store.prune()
+      .then(n => n && log.info('pruned history', { rows: n }))
+      .catch(err => log.warn('prune failed', { error: err.message }));
+    prune();
+    pruneTimer = setInterval(prune, 6 * 60 * 60 * 1000);
   }
+
+  let shuttingDown = false;
+  const shutdown = async signal => {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    log.info('shutting down', { signal });
+    if (pruneTimer) clearInterval(pruneTimer);
+    server.close();
+    const drained = await sender.drain(20000);
+    if (!drained) log.warn('shutdown with payloads still queued', { queue: sender.depths() });
+    await store.close().catch(() => {});
+    process.exit(0);
+  };
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT', () => shutdown('SIGINT'));
 }
 
-// Webhook endpoints
-app.post('/webhook/:source', async (req, res) => {
-  const source = req.params.source;
-  const parser = parsers[source];
-  if (!parser) return res.status(404).json({ error: `Unknown source: ${source}` });
-  
-  try {
-    const embeds = parser.parse(req.body, config);
-    const defaultRoute = config.sources?.[source]?.route || 'daily';
-    await discord.send(embeds, defaultRoute);
-    res.json({ ok: true, sent: embeds.length });
-  } catch (err) {
-    console.error(`Error processing ${source}:`, err);
-    res.status(500).json({ error: err.message });
-  }
-});
+if (require.main === module) {
+  main().catch(err => {
+    process.stderr.write(JSON.stringify({ ts: new Date().toISOString(), level: 'error', msg: 'fatal', error: err.message }) + '\n');
+    process.exit(1);
+  });
+}
 
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok', sources: Object.keys(parsers) });
-});
-
-const port = config.port || 3080;
-app.listen(port, () => console.log(`DiscoRelay listening on port ${port}`));
+module.exports = { main };
