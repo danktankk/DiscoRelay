@@ -84,7 +84,7 @@ function createApp({ config, store, sender, dedup, metrics, log, parsers, servic
       const result = await parser.parse(body, config, { source, query: req.query, headers: req.headers, ip: req.ip, services });
       const cfgRoute = config.sources[source] && config.sources[source].route;
       const defaultRoute = cfgRoute && cfgRoute !== 'auto' ? cfgRoute : 'daily';
-      payloads = toPayloads(result, defaultRoute);
+      payloads = toPayloads(result, defaultRoute, config.sources[source]);
     } catch (err) {
       metrics.inc('rejected_total', { reason: 'parse_error' });
       log.error('parse failed', { source, ip: req.ip, error: err.message });

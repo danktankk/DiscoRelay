@@ -18,6 +18,7 @@ const DEFAULTS = {
   store: { retention_days: 90 },
   metrics: { public: false },
   geoip: { enabled: true, map: true, zoom: 10, per_minute: 40 },
+  enrich: { github: true, tmdb_api_key: '', omdb_api_key: '' },
 };
 
 /**
@@ -45,9 +46,13 @@ function loadConfig(configPath, env = process.env) {
     store: { ...DEFAULTS.store, ...(raw.store || {}) },
     metrics: { ...DEFAULTS.metrics, ...(raw.metrics || {}) },
     geoip: { ...DEFAULTS.geoip, ...(raw.geoip || {}) },
+    enrich: { ...DEFAULTS.enrich, ...(raw.enrich || {}) },
     channels: { ...(raw.channels || {}) },
   };
   if (env.GEOIP_ENABLED !== undefined) cfg.geoip.enabled = env.GEOIP_ENABLED !== 'false';
+  if (env.TMDB_API_KEY) cfg.enrich.tmdb_api_key = env.TMDB_API_KEY.trim();
+  if (env.OMDB_API_KEY) cfg.enrich.omdb_api_key = env.OMDB_API_KEY.trim();
+  if (env.ENRICH_GITHUB !== undefined) cfg.enrich.github = env.ENRICH_GITHUB !== 'false';
 
   for (const [key, value] of Object.entries(env)) {
     const m = /^DISCORD_WEBHOOK_([A-Z0-9_]+)$/.exec(key);

@@ -7,6 +7,7 @@ const { createStore } = require('./store');
 const { Dedup } = require('./dedup');
 const DiscordSender = require('./discord');
 const { GeoIP } = require('./geoip');
+const { Enricher } = require('./enrich');
 const { createApp, loadParsers } = require('./app');
 
 async function main() {
@@ -20,7 +21,8 @@ async function main() {
   const dedup = new Dedup({ windowSec: config.dedup.window_sec, maxEntries: config.dedup.max_entries });
   const parsers = loadParsers(undefined, log);
   const geoip = new GeoIP({ enabled: config.geoip.enabled !== false, perMinute: config.geoip.per_minute, metrics, log });
-  const app = createApp({ config, store, sender, dedup, metrics, log, parsers, services: { geoip } });
+  const enrich = new Enricher({ tmdbKey: config.enrich.tmdb_api_key, omdbKey: config.enrich.omdb_api_key, github: config.enrich.github, metrics, log });
+  const app = createApp({ config, store, sender, dedup, metrics, log, parsers, services: { geoip, enrich } });
 
   const server = app.listen(config.port, () => {
     log.info('DiscoRelay listening', {
@@ -31,6 +33,7 @@ async function main() {
       auth: config.auth.required,
       history: store.enabled,
       geoip: config.geoip.enabled !== false,
+      enrich: enrich.providers,
       dedupWindowSec: config.dedup.window_sec,
     });
     if (!config.auth.required) log.warn('AUTH DISABLED: any host that can reach this port can post to your Discord');
