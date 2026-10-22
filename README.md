@@ -3,7 +3,7 @@
 </p>
 
 <p align="right">
-  <img src="https://img.shields.io/badge/version-2.1.1-blue" />
+  <img src="https://img.shields.io/badge/version-2.2.0-blue" />
   <img src="https://img.shields.io/badge/docker-compose-blue" />
   <img src="https://img.shields.io/badge/license-AGPL--3.0-blue" />
 </p>
@@ -20,6 +20,8 @@ A self-hosted Discord notification hub. Every service in your homelab posts to *
 | **Notifiarr passthrough** | `POST /api/v1/notification/passthrough/<token>` (or `/webhook/notifiarr`) accepts the [Notifiarr passthrough schema](https://notifiarr.wiki/pages/integrations/passthrough/) unchanged: title, icon, description, fields, thumbnail, image, color, footer, pings. Scripts written for Notifiarr only change the host. `channels` in config maps a Notifiarr channel id to a route. |
 | **GeoIP + map** | CrowdSec bans get Country / State / City / ISP / ASN from ip-api.com (free tier, cached, rate-limited) and an OpenStreetMap tile of the area. `GEOIP_ENABLED=false` turns it off. |
 | **Fan-out** | `sources.<name>.forward: [urls]` copies the raw sender payload to extra consumers, so one DIUN webhook can feed both Discord and diun-dash. |
+| **Setup page** | `http://HUB:3080/admin` (relay token with admin scope): board of channels and 24 h traffic, per-source default channel, per-event channel or mute, dedup window, raw forward targets, webhook rotation per channel without touching `.env`, test sends, delivery history with a Discord-style preview and resend, copy-paste sender setup, enrichment keys. Changes are stored in Postgres and applied live. |
+| **Notifiarr-grade arr embeds** | Radarr / Sonarr / Lidarr grabs, imports, upgrades, adds, deletes, renames, health, manual-interaction and application updates. Certification, runtime, dual ratings (TMDb / IMDb / RT / Metacritic), awards, networks and release changelogs come from free providers: TMDb (`TMDB_API_KEY`), OMDb (`OMDB_API_KEY`, 1000/day) and GitHub releases. Without keys the embed still carries everything the webhook payload has. |
 | **Routing** | Six channel routes: `critical`, `warning`, `daily`, `media`, `backups`, `updates`. Parsers pick a route by severity; you can override per source. |
 | **Auth** | Every sender presents a token (`X-Relay-Token` header, `Authorization: Bearer`, or `?token=`). Tokens can be scoped to sources. |
 | **Dedup** | Identical payloads from the same source are sent at most once per window (default 5 min, per-source override, `0` disables). |
@@ -73,13 +75,19 @@ Secrets live only in `.env` (gitignored). `config.json` holds no secrets and may
 | `DEDUP_WINDOW_SEC` | Default dedup window (default 300) |
 | `METRICS_PUBLIC` | `true` exposes `/metrics` without a token |
 | `GEOIP_ENABLED` | `false` disables ip-api.com lookups and the map tile on CrowdSec bans |
+| `TMDB_API_KEY` / `OMDB_API_KEY` | Optional free keys for arr embed enrichment (ratings, certification, runtime, awards, networks). Can also be set from the setup page. |
+| `ENRICH_GITHUB` | `false` stops fetching release notes for Radarr/Sonarr/Lidarr application-update events |
 | `LOG_LEVEL` | `debug` / `info` / `warn` / `error` |
 
 ### Per-source config (`config.json → sources.<name>`)
 
 - `route` — fixed route, or `auto` to let the parser decide by severity
 - `dedup_window_sec` — override the global window (`0` = never suppress, e.g. media events)
+- `events` — per-event channel for parsers that tag events (the arrs): `{ "Grab": "daily", "Health": "warning", "Rename": "off" }`; `off` mutes
+- `forward` — extra URLs that receive the raw sender payload
 - `icon`, `color` — embed cosmetics used by the parser
+
+The setup page writes the same keys to the `settings` table in Postgres; database values win over `config.json` and survive restarts.
 
 ## Pointing senders at the hub
 
@@ -87,6 +95,8 @@ Replace `HUB` with the relay's address and `TOKEN` with your relay token.
 
 | Sender | Where | Value |
 |---|---|---|
+| Radarr / Sonarr / Lidarr | Settings → Connect → Webhook | `http://HUB:3080/webhook/radarr?token=TOKEN` (`sonarr`, `lidarr`), POST, every trigger on. The setup page's "Wire a sender" tab has these pre-filled. |
+| Tautulli | Notification Agents → Webhook | `http://HUB:3080/webhook/tautulli?token=TOKEN`, JSON data with the fields you want |
 | DIUN | `DIUN_NOTIF_WEBHOOK_ENDPOINT` | `http://HUB:3080/webhook/diun?token=TOKEN` (remove the `DIUN_NOTIF_DISCORD_*` vars). Keep a dashboard fed with `sources.diun.forward: ["http://diun-dash:8554/webhook"]`. |
 | CrowdSec | `notifications/discorelay.yaml` (`type: http`) | `url: http://HUB:3080/webhook/crowdsec` + `headers: { X-Relay-Token: TOKEN }` |
 | Backrest | hook `actionCommand` | `curl -s -X POST http://HUB:3080/webhook/backrest -H "X-Relay-Token: TOKEN" …` |
@@ -104,6 +114,8 @@ Replace `HUB` with the relay's address and `TOKEN` with your relay token.
 | `GET` | `/metrics` | token (`metrics` scope) unless public | Prometheus text format |
 | `GET` | `/api/history?limit=&source=&status=&route=` | token (`admin` scope) | recent notifications from Postgres |
 | `POST` | `/api/test/:route` | token (`admin` scope) | send a test embed to a route |
+| `GET` | `/admin` | token entered in the page | setup page |
+| `*` | `/api/admin/…` | token (`admin` scope) | overview, sources, routes, history (+resend), settings, senders, `POST /api/admin/preview` dry-run of any payload |
 
 Metrics: `discorelay_received_total{source}`, `discorelay_sent_total{route}`, `discorelay_failed_total{route,reason}`, `discorelay_suppressed_total{source}`, `discorelay_rejected_total{reason}`, `discorelay_attempts_total{route,outcome}`, `discorelay_queue_depth{route}`.
 
@@ -113,7 +125,9 @@ Embeds follow the [Notifiarr](https://github.com/Notifiarr) convention: author l
 
 ## Adding a source
 
-Drop `src/parsers/<name>.js` exporting `parse(body, config, ctx)`. Return either an array of embeds (each may set `route`) or `{ payloads: [{ route, body }] }` where `body` is a complete Discord webhook body. `ctx` carries `{ source, query, headers, ip }`. Add a test in `test/parsers.test.js`, run `npm test`, rebuild.
+Drop `src/parsers/<name>.js` exporting `parse(body, config, ctx)` (sync or async). Return either an array of embeds (each may set `route`, and `event` to opt into per-event routing) or `{ payloads: [{ route, body }] }` where `body` is a complete Discord webhook body. `ctx` carries `{ source, query, headers, ip, services: { geoip, enrich } }`. Export `events: [...]` so the setup page can list them. Add a test in `test/parsers.test.js`, run `npm test`, rebuild.
+
+Local setup page without secrets: `node dev-local.js` → `http://127.0.0.1:3081/admin`, token `local-dev-token-0123456789`.
 
 ## Development
 

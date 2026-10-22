@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DiscoRelay</title>
+<meta name="description" content="Setup and status page for the DiscoRelay Discord notification hub">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%235865F2'/%3E%3Ccircle cx='16' cy='16' r='5' fill='%23fff'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="/admin/app.css">
+</head>
+<body>
+<div id="gate" class="gate" hidden>
+  <form id="gate-form" class="gate-card" autocomplete="off">
+    <div class="brand"><span class="dot"></span><span>DiscoRelay</span></div>
+    <p>Paste the relay token (the one with admin scope). It stays in this browser only.</p>
+    <input id="gate-token" type="password" placeholder="RELAY_TOKEN" spellcheck="false" autofocus>
+    <button type="submit">Open the board</button>
+    <div id="gate-error" class="error" hidden></div>
+  </form>
+</div>
+
+<div id="shell" class="shell" hidden>
+  <aside class="rail">
+    <div class="brand"><span class="dot"></span><span>DiscoRelay</span><small id="version"></small></div>
+    <nav id="nav">
+      <button data-view="overview" class="active">Board</button>
+      <button data-view="sources">Sources</button>
+      <button data-view="routes">Channels</button>
+      <button data-view="history">History</button>
+      <button data-view="senders">Wire a sender</button>
+      <button data-view="settings">Settings</button>
+    </nav>
+    <div class="rail-foot">
+      <div id="pulse" class="pulse">—</div>
+      <button id="logout" class="ghost">Forget token</button>
+    </div>
+  </aside>
+  <main id="main" class="main"></main>
+  <aside id="inspector" class="inspector" hidden>
+    <div class="inspector-head"><span id="inspector-title">Preview</span><button id="inspector-close" class="ghost">×</button></div>
+    <div id="inspector-body"></div>
+  </aside>
+</div>
+<div id="toast" class="toast" hidden></div>
+<script src="/admin/app.js"></script>
+</body>
+</html>

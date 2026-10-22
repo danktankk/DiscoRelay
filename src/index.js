@@ -8,6 +8,7 @@ const { Dedup } = require('./dedup');
 const DiscordSender = require('./discord');
 const { GeoIP } = require('./geoip');
 const { Enricher } = require('./enrich');
+const { Settings } = require('./settings');
 const { createApp, loadParsers } = require('./app');
 
 async function main() {
@@ -22,7 +23,9 @@ async function main() {
   const parsers = loadParsers(undefined, log);
   const geoip = new GeoIP({ enabled: config.geoip.enabled !== false, perMinute: config.geoip.per_minute, metrics, log });
   const enrich = new Enricher({ tmdbKey: config.enrich.tmdb_api_key, omdbKey: config.enrich.omdb_api_key, github: config.enrich.github, metrics, log });
-  const app = createApp({ config, store, sender, dedup, metrics, log, parsers, services: { geoip, enrich } });
+  const services = { geoip, enrich };
+  const settings = await new Settings({ config, store, log, services, dedup }).load(); // admin-page overrides from Postgres
+  const app = createApp({ config, store, sender, dedup, metrics, log, parsers, services, settings });
 
   const server = app.listen(config.port, () => {
     log.info('DiscoRelay listening', {

@@ -26,6 +26,11 @@ CREATE TABLE IF NOT EXISTS deliveries (
   error           TEXT
 );
 CREATE INDEX IF NOT EXISTS deliveries_notification_idx ON deliveries (notification_id);
+CREATE TABLE IF NOT EXISTS settings (
+  key         TEXT PRIMARY KEY,
+  value       JSONB NOT NULL,
+  updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
 `;
 
 /** Used when DATABASE_URL is not set: the relay works, nothing is remembered. */
@@ -36,6 +41,13 @@ class NullStore {
   async recordAttempt() {}
   async finalize() {}
   async recent() { return []; }
+  async recentDetailed() { return []; }
+  async getNotification() { return null; }
+  async sourceStats() { return {}; }
+  async routeStats() { return {}; }
+  async loadSettings() { return {}; }
+  async putSetting() {}
+  async deleteSetting() {}
   async prune() { return 0; }
   async health() { return { enabled: false }; }
   async close() {}
@@ -92,6 +104,79 @@ class PgStore {
                  ORDER BY id DESC LIMIT $${params.length}`;
     const { rows } = await this.pool.query(sql, params);
     return rows;
+  }
+
+  /** Like recent() but with the Discord payload and optional title search, for the admin page. */
+  async recentDetailed({ limit = 50, source, status, route, q } = {}) {
+    const where = [];
+    const params = [];
+    if (source) { params.push(source); where.push(`source = $${params.length}`); }
+    if (status) { params.push(status); where.push(`status = $${params.length}`); }
+    if (route) { params.push(route); where.push(`route = $${params.length}`); }
+    if (q) { params.push(`%${String(q).slice(0, 100)}%`); where.push(`title ILIKE $${params.length}`); }
+    params.push(Math.min(Math.max(Number(limit) || 50, 1), 200));
+    const sql = `SELECT id, received_at, finished_at, source, route, status, attempts, title, last_error, request_ip, body
+                 FROM notifications ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
+                 ORDER BY id DESC LIMIT $${params.length}`;
+    const { rows } = await this.pool.query(sql, params);
+    return rows;
+  }
+
+  async getNotification(id) {
+    const n = Number(id);
+    if (!Number.isFinite(n)) return null;
+    const { rows } = await this.pool.query('SELECT * FROM notifications WHERE id = $1', [n]);
+    if (!rows[0]) return null;
+    const d = await this.pool.query('SELECT id, attempted_at, http_status, error FROM deliveries WHERE notification_id = $1 ORDER BY id', [n]);
+    return { ...rows[0], deliveries: d.rows };
+  }
+
+  /** Per-source counts over the last `hours`: { source: { total, sent, failed, suppressed, dropped, last_at } }. */
+  async sourceStats(hours = 24) {
+    const { rows } = await this.pool.query(
+      `SELECT source,
+              count(*)::int AS total,
+              count(*) FILTER (WHERE status = 'sent')::int AS sent,
+              count(*) FILTER (WHERE status = 'failed')::int AS failed,
+              count(*) FILTER (WHERE status = 'suppressed')::int AS suppressed,
+              count(*) FILTER (WHERE status = 'dropped')::int AS dropped,
+              max(received_at) AS last_at
+       FROM notifications WHERE received_at > now() - make_interval(hours => $1)
+       GROUP BY source`, [hours]);
+    const out = {};
+    for (const r of rows) out[r.source] = r;
+    return out;
+  }
+
+  async routeStats(hours = 24) {
+    const { rows } = await this.pool.query(
+      `SELECT route,
+              count(*) FILTER (WHERE status = 'sent')::int AS sent,
+              count(*) FILTER (WHERE status = 'failed')::int AS failed,
+              max(finished_at) FILTER (WHERE status = 'sent') AS last_sent_at
+       FROM notifications WHERE received_at > now() - make_interval(hours => $1)
+       GROUP BY route`, [hours]);
+    const out = {};
+    for (const r of rows) out[r.route] = r;
+    return out;
+  }
+
+  async loadSettings() {
+    const { rows } = await this.pool.query('SELECT key, value FROM settings');
+    const out = {};
+    for (const r of rows) out[r.key] = r.value;
+    return out;
+  }
+
+  async putSetting(key, value) {
+    await this.pool.query(
+      'INSERT INTO settings (key, value, updated_at) VALUES ($1, $2, now()) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now()',
+      [key, JSON.stringify(value)]
+    );
+  }
+
+  async deleteSetting(key) {
+    await this.pool.query('DELETE FROM settings WHERE key = $1', [key]);
   }
 
   async prune() {

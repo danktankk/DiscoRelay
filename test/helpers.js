@@ -50,6 +50,8 @@ function baseConfig(fake, overrides = {}) {
     delivery: { timeout_ms: 300, max_attempts: 3, backoff_base_ms: 5, backoff_max_ms: 20, max_rate_limit_waits: 2, max_rate_limit_wait_ms: 50 },
     store: { retention_days: 1, database_url: null },
     metrics: { public: false },
+    geoip: { enabled: true, map: true, zoom: 10, per_minute: 40 },
+    enrich: { github: true, tmdb_api_key: '', omdb_api_key: '' },
     ...overrides,
   };
 }
@@ -61,12 +63,16 @@ async function startApp(fake, overrides = {}, { now } = {}) {
   const sender = new DiscordSender(config, { store, metrics, log: quietLog, fetchImpl: fake.fetchImpl });
   const dedup = new Dedup({ windowSec: config.dedup.window_sec, maxEntries: config.dedup.max_entries, now });
   const parsers = loadParsers();
-  const app = createApp({ config, store, sender, dedup, metrics, log: quietLog, parsers });
+  const { Settings } = require('../src/settings');
+  const services = {};
+  const settings = await new Settings({ config, store, log: quietLog, services, dedup }).load();
+  const app = createApp({ config, store, sender, dedup, metrics, log: quietLog, parsers, services, settings });
   const server = await new Promise(resolve => { const s = app.listen(0, '127.0.0.1', () => resolve(s)); });
   const base = `http://127.0.0.1:${server.address().port}`;
   const post = (path, body, headers = {}) => fetch(base + path, { method: 'POST', headers: { 'content-type': 'application/json', ...headers }, body: typeof body === 'string' ? body : JSON.stringify(body) });
   const get = (path, headers = {}) => fetch(base + path, { headers });
-  const app_ = { config, metrics, sender, dedup, base, post, get, doneLog: [], doneCursor: 0, close: () => new Promise(r => server.close(r)) };
+  const send = (method, path, body, headers = {}) => fetch(base + path, { method, headers: { 'content-type': 'application/json', ...headers }, body: body === undefined ? undefined : JSON.stringify(body) });
+  const app_ = { config, metrics, sender, dedup, settings, base, post, get, send, doneLog: [], doneCursor: 0, close: () => new Promise(r => server.close(r)) };
   sender.on('done', entry => app_.doneLog.push(entry));
   return app_;
 }

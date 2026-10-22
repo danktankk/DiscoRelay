@@ -6,6 +6,7 @@ const path = require('path');
 const { authorize } = require('./auth');
 const { toPayloads, firstTitle, clean } = require('./normalize');
 const { fingerprint } = require('./dedup');
+const { mountAdmin } = require('./admin');
 
 function loadParsers(dir = path.join(__dirname, 'parsers'), log) {
   const parsers = {};
@@ -54,7 +55,7 @@ function forwardRaw({ config, source, rawBody, headers, metrics, log, fetchImpl 
   }
 }
 
-function createApp({ config, store, sender, dedup, metrics, log, parsers, services = {}, fetchImpl }) {
+function createApp({ config, store, sender, dedup, metrics, log, parsers, services = {}, fetchImpl, settings = null }) {
   const app = express();
   app.disable('x-powered-by');
   app.set('trust proxy', 'loopback, uniquelocal');
@@ -178,6 +179,10 @@ function createApp({ config, store, sender, dedup, metrics, log, parsers, servic
     sender.enqueue({ id: null, source: 'test', route, body: testEmbed(route, config.version) });
     res.status(202).json({ ok: true, route });
   });
+
+  // Setup / admin page and its API (token with the `admin` scope).
+  mountAdmin(app, { config, store, sender, dedup, metrics, log, parsers, services, settings, fetchImpl });
+  app.get('/', (req, res) => res.redirect('/admin'));
 
   // Body-parser and other errors → JSON, never an HTML stack trace.
   // eslint-disable-next-line no-unused-vars
