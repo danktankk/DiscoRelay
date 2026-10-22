@@ -3,7 +3,7 @@
 </p>
 
 <p align="right">
-  <img src="https://img.shields.io/badge/version-2.2.1-blue" />
+  <img src="https://img.shields.io/badge/version-2.3.0-blue" />
   <img src="https://img.shields.io/badge/docker-compose-blue" />
   <img src="https://img.shields.io/badge/license-AGPL--3.0-blue" />
 </p>
@@ -21,7 +21,7 @@ A self-hosted Discord notification hub. Every service in your homelab posts to *
 | **GeoIP + map** | CrowdSec bans get Country / State / City / ISP / ASN from ip-api.com (free tier, cached, rate-limited) and an OpenStreetMap tile of the area. `GEOIP_ENABLED=false` turns it off. |
 | **Fan-out** | `sources.<name>.forward: [urls]` copies the raw sender payload to extra consumers, so one DIUN webhook can feed both Discord and diun-dash. |
 | **Setup page** | `http://HUB:3080/admin` (relay token with admin scope): board of channels and 24 h traffic, per-source default channel, per-event channel or mute, dedup window, raw forward targets, webhook rotation per channel without touching `.env`, test sends, delivery history with a Discord-style preview and resend, copy-paste sender setup, enrichment keys. Changes are stored in Postgres and applied live. |
-| **Notifiarr-grade arr embeds** | Radarr / Sonarr / Lidarr grabs, imports, upgrades, adds, deletes, renames, health, manual-interaction and application updates. Certification, runtime, dual ratings (TMDb / IMDb / RT / Metacritic), awards, networks and release changelogs come from free providers: TMDb (`TMDB_API_KEY`), OMDb (`OMDB_API_KEY`, 1000/day) and GitHub releases. Without keys the embed still carries everything the webhook payload has. |
+| **Notifiarr-grade arr embeds** | Radarr / Sonarr / Lidarr grabs, imports, upgrades, adds, deletes, renames, health, manual-interaction and application updates. Certification, runtime, ratings (TMDb / IMDb / Rotten Tomatoes + audience / Metacritic / Trakt / Letterboxd), awards, networks and release changelogs come from free providers: TMDb (`TMDB_API_KEY`), MDBList (`MDBLIST_API_KEY`, one call for every rating source), OMDb (`OMDB_API_KEY`, optional, adds awards) and GitHub releases. Without keys the embed still carries everything the webhook payload has. |
 | **Routing** | Six channel routes: `critical`, `warning`, `daily`, `media`, `backups`, `updates`. Parsers pick a route by severity; you can override per source. |
 | **Auth** | Every sender presents a token (`X-Relay-Token` header, `Authorization: Bearer`, or `?token=`). Tokens can be scoped to sources. |
 | **Dedup** | Identical payloads from the same source are sent at most once per window (default 5 min, per-source override, `0` disables). |
@@ -75,7 +75,7 @@ Secrets live only in `.env` (gitignored). `config.json` holds no secrets and may
 | `DEDUP_WINDOW_SEC` | Default dedup window (default 300) |
 | `METRICS_PUBLIC` | `true` exposes `/metrics` without a token |
 | `GEOIP_ENABLED` | `false` disables ip-api.com lookups and the map tile on CrowdSec bans |
-| `TMDB_API_KEY` / `OMDB_API_KEY` | Optional free keys for arr embed enrichment (ratings, certification, runtime, awards, networks). Can also be set from the setup page. |
+| `TMDB_API_KEY` / `MDBLIST_API_KEY` / `OMDB_API_KEY` | Optional free keys for arr embed enrichment (ratings, certification, runtime, awards, networks). Can also be set from the setup page. If you run Kometa, its `config.yml` already holds TMDb and MDBList keys. |
 | `ENRICH_GITHUB` | `false` stops fetching release notes for Radarr/Sonarr/Lidarr application-update events |
 | `LOG_LEVEL` | `debug` / `info` / `warn` / `error` |
 

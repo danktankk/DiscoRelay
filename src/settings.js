@@ -127,6 +127,7 @@ class Settings {
       if (en) {
         if (value.tmdb_api_key !== undefined) en.tmdbKey = value.tmdb_api_key || null;
         if (value.omdb_api_key !== undefined) en.omdbKey = value.omdb_api_key || null;
+        if (value.mdblist_api_key !== undefined) en.mdblistKey = value.mdblist_api_key || null;
         if (value.github !== undefined) en.github = !!value.github;
       }
     }
@@ -149,7 +150,7 @@ class Settings {
     } else if (key === 'enrich') {
       Object.assign(cfg.enrich, clone(this.base.enrich));
       const en = this.services.enrich;
-      if (en) { en.tmdbKey = cfg.enrich.tmdb_api_key || null; en.omdbKey = cfg.enrich.omdb_api_key || null; en.github = cfg.enrich.github !== false; }
+      if (en) { en.tmdbKey = cfg.enrich.tmdb_api_key || null; en.omdbKey = cfg.enrich.omdb_api_key || null; en.mdblistKey = cfg.enrich.mdblist_api_key || null; en.github = cfg.enrich.github !== false; }
     }
   }
 

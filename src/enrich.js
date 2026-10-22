@@ -5,6 +5,7 @@
 //
 // Providers (all optional, all free tier, all cached, none ever throws):
 //   TMDb    https://api.themoviedb.org   TMDB_API_KEY   movie/series details, certification, runtime, vote average
+//   MDBList https://api.mdblist.com      MDBLIST_API_KEY IMDb/RT/Metacritic/Trakt/Letterboxd ratings, certification, runtime (free tier)
 //   OMDb    https://www.omdbapi.com      OMDB_API_KEY   IMDb/RT/Metacritic ratings, MPAA rating, awards (1000 req/day free)
 //   GitHub  https://api.github.com       no key         release notes for ApplicationUpdate events (60 req/h unauthenticated)
 
@@ -59,9 +60,10 @@ function parseReleaseNotes(body) {
 }
 
 class Enricher {
-  constructor({ tmdbKey, omdbKey, github = true, fetchImpl, metrics, log, now = Date.now, timeoutMs = 6000, ttlMs = 24 * 3600 * 1000, maxEntries = 2000 } = {}) {
+  constructor({ tmdbKey, omdbKey, mdblistKey, github = true, fetchImpl, metrics, log, now = Date.now, timeoutMs = 6000, ttlMs = 24 * 3600 * 1000, maxEntries = 2000 } = {}) {
     this.tmdbKey = tmdbKey || null;
     this.omdbKey = omdbKey || null;
+    this.mdblistKey = mdblistKey || null;
     this.github = github !== false;
     this.fetch = fetchImpl || globalThis.fetch;
     this.metrics = metrics;
@@ -74,7 +76,7 @@ class Enricher {
   }
 
   get providers() {
-    return { tmdb: !!this.tmdbKey, omdb: !!this.omdbKey, github: this.github };
+    return { tmdb: !!this.tmdbKey, mdblist: !!this.mdblistKey, omdb: !!this.omdbKey, github: this.github };
   }
 
   _cached(key) {
@@ -126,6 +128,7 @@ class Enricher {
         if (!imdbId && d.imdb_id) imdbId = d.imdb_id;
       }
     }
+    if (this.mdblistKey && (tmdbId || imdbId)) Object.assign(out, await this._mdblist('movie', { tmdbId, imdbId }, out));
     if (this.omdbKey && imdbId) Object.assign(out, await this._omdb(imdbId, out));
     return this._remember(key, Object.keys(out.ratings).length || Object.keys(out).length > 1 ? out : null);
   }
@@ -148,8 +151,45 @@ class Enricher {
         if (!imdbId && d.external_ids && d.external_ids.imdb_id) imdbId = d.external_ids.imdb_id;
       }
     }
+    if (this.mdblistKey && (tmdbId || imdbId)) Object.assign(out, await this._mdblist('show', { tmdbId, imdbId }, out));
     if (this.omdbKey && imdbId) Object.assign(out, await this._omdb(imdbId, out));
     return this._remember(key, Object.keys(out.ratings).length || Object.keys(out).length > 1 ? out : null);
+  }
+
+  /**
+   * MDBList: one call returns every rating source. `kind` is movie|show. Tries the typed endpoint by TMDb id, then by
+   * IMDb id. Response shape: { ratings: [{ source: 'imdb'|'tomatoes'|'audience'|'metacritic'|'trakt'|'letterboxd', value }],
+   * certification, runtime, score, ... }. Values already present in `base` win.
+   */
+  async _mdblist(kind, { tmdbId, imdbId }, base) {
+    const paths = [];
+    if (tmdbId) paths.push(`tmdb/${kind}/${encodeURIComponent(tmdbId)}`);
+    if (imdbId) paths.push(`imdb/${kind}/${encodeURIComponent(imdbId)}`);
+    let d = null;
+    for (const p of paths) {
+      d = await this._json('mdblist', `https://api.mdblist.com/${p}?apikey=${this.mdblistKey}`);
+      if (d && d.response !== false && (Array.isArray(d.ratings) || d.title)) break;
+      d = null;
+    }
+    if (!d) return {};
+    const out = { ratings: { ...base.ratings } };
+    const num = v => (v === null || v === undefined || v === '' ? null : Number(v));
+    for (const r of Array.isArray(d.ratings) ? d.ratings : []) {
+      const v = num(r && r.value);
+      if (v === null || Number.isNaN(v) || !r.source) continue;
+      const s = String(r.source).toLowerCase();
+      if (s === 'imdb' && !out.ratings.imdb) out.ratings.imdb = `${v}/10`;
+      else if ((s === 'tomatoes' || s === 'rotten_tomatoes') && !out.ratings.rt) out.ratings.rt = `${Math.round(v)}%`;
+      else if ((s === 'audience' || s === 'tomatoes_audience') && !out.ratings.rt_audience) out.ratings.rt_audience = `${Math.round(v)}%`;
+      else if (s === 'metacritic' && !out.ratings.metacritic) out.ratings.metacritic = String(Math.round(v));
+      else if (s === 'trakt' && !out.ratings.trakt) out.ratings.trakt = `${Math.round(v)}%`;
+      else if (s === 'letterboxd' && !out.ratings.letterboxd) out.ratings.letterboxd = String(v);
+      else if (s === 'tmdb' && !out.ratings.tmdb && v) out.ratings.tmdb = (v > 10 ? v / 10 : v).toFixed(1);
+    }
+    if (d.certification && !base.certification) out.certification = String(d.certification);
+    if (d.runtime && !base.runtime) out.runtime = Number(d.runtime);
+    if (d.score_average && !out.ratings.mdblist) out.ratings.mdblist = String(d.score_average);
+    return out;
   }
 
   async _omdb(imdbId, base) {

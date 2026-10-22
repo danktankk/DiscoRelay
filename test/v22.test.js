@@ -166,7 +166,7 @@ test('enricher: github release notes fetched once and cached, failures swallowed
   };
   const metrics = new Metrics();
   const en = new Enricher({ tmdbKey: 'k', omdbKey: 'o', fetchImpl, metrics, log: quietLog });
-  assert.deepEqual(en.providers, { tmdb: true, omdb: true, github: true });
+  assert.deepEqual(en.providers, { tmdb: true, mdblist: false, omdb: true, github: true });
   const notes = await en.release('radarr', '5.21.1.9799');
   assert.deepEqual([notes.new, notes.fixed], [['A'], ['B']]);
   await en.release('radarr', '5.21.1.9799');
@@ -184,6 +184,28 @@ test('enricher: github release notes fetched once and cached, failures swallowed
   assert.equal(await off.movie({ tmdbId: 1 }), null);
   const broken = new Enricher({ tmdbKey: 'k', fetchImpl: async () => { throw new Error('boom'); }, log: quietLog });
   assert.equal(await broken.movie({ tmdbId: 1 }), null);
+});
+
+test('enricher: MDBList fills IMDb/RT/MC/Trakt/Letterboxd, certification and runtime; TMDb values win; falls back from tmdb to imdb path', async () => {
+  const calls = [];
+  const fetchImpl = async (url) => {
+    calls.push(url);
+    if (url.includes('api.mdblist.com/tmdb/movie/37165')) return { ok: true, status: 200, json: async () => ({ title: 'The Truman Show', runtime: 103, certification: 'PG', score_average: 86,
+      ratings: [{ source: 'imdb', value: 8.2 }, { source: 'tomatoes', value: 95 }, { source: 'audience', value: 89 }, { source: 'metacritic', value: 90 }, { source: 'trakt', value: 84 }, { source: 'letterboxd', value: 4.1 }, { source: 'tmdb', value: 81 }] }) };
+    if (url.includes('api.mdblist.com/tmdb/show/999')) return { ok: false, status: 404, json: async () => ({}) };
+    if (url.includes('api.mdblist.com/imdb/show/tt1')) return { ok: true, status: 200, json: async () => ({ title: 'Some Show', ratings: [{ source: 'imdb', value: 8.7 }] }) };
+    return { ok: false, status: 404, json: async () => ({}) };
+  };
+  const en = new Enricher({ mdblistKey: 'm', fetchImpl, log: quietLog });
+  assert.deepEqual(en.providers, { tmdb: false, mdblist: true, omdb: false, github: true });
+  const m = await en.movie({ tmdbId: 37165, imdbId: 'tt0120382' });
+  assert.equal(m.certification, 'PG');
+  assert.equal(m.runtime, 103);
+  assert.deepEqual(m.ratings, { imdb: '8.2/10', rt: '95%', rt_audience: '89%', metacritic: '90', trakt: '84%', letterboxd: '4.1', tmdb: '8.1', mdblist: '86' });
+  assert.equal(arr.ratingsLine(m.ratings), 'TMDb: 8.1 • IMDb: 8.2/10 • RT: 95% (audience 89%) • MC: 90 • Trakt: 84% • Letterboxd: 4.1');
+  const s = await en.series({ tmdbId: 999, imdbId: 'tt1' });
+  assert.deepEqual(s.ratings, { imdb: '8.7/10' });
+  assert.equal(calls.filter(u => u.includes('/show/')).length, 2, 'tmdb path 404 → imdb path');
 });
 
 test('app: per-event routing overrides from sources.<s>.events (route change and off)', async t => {

@@ -80,7 +80,7 @@ function mountAdmin(app, { config, store, sender, dedup, metrics, log, parsers, 
       db,
       queue: sender.depths(),
       geoip: { enabled: services.geoip ? !!services.geoip.enabled : (config.geoip || {}).enabled !== false },
-      enrich: services.enrich ? services.enrich.providers : { tmdb: false, omdb: false, github: false },
+      enrich: services.enrich ? services.enrich.providers : { tmdb: false, mdblist: false, omdb: false, github: false },
       dedup_window_sec: config.dedup.window_sec,
       persisted: !!(settings && store.enabled),
       routes,
@@ -176,7 +176,7 @@ function mountAdmin(app, { config, store, sender, dedup, metrics, log, parsers, 
     res.json({
       dedup: { window_sec: (config.dedup || {}).window_sec },
       geoip: { enabled: geo.enabled !== false, map: geo.map !== false, zoom: geo.zoom || 10 },
-      enrich: { github: en.github !== false, tmdb_api_key: maskKey(en.tmdb_api_key), omdb_api_key: maskKey(en.omdb_api_key), tmdb: !!en.tmdb_api_key, omdb: !!en.omdb_api_key },
+      enrich: { github: en.github !== false, tmdb_api_key: maskKey(en.tmdb_api_key), omdb_api_key: maskKey(en.omdb_api_key), mdblist_api_key: maskKey(en.mdblist_api_key), tmdb: !!en.tmdb_api_key, omdb: !!en.omdb_api_key, mdblist: !!en.mdblist_api_key },
       store: { enabled: store.enabled, retention_days: (config.store || {}).retention_days },
       overridden: settings ? Object.keys(settings.values).filter(k => !k.includes('.')) : [],
     });
@@ -201,7 +201,7 @@ function mountAdmin(app, { config, store, sender, dedup, metrics, log, parsers, 
       if (b.enrich) {
         const v = { ...((settings && settings.values.enrich) || {}) };
         if (b.enrich.github !== undefined) v.github = !!b.enrich.github;
-        for (const k of ['tmdb_api_key', 'omdb_api_key']) if (b.enrich[k] !== undefined) v[k] = String(b.enrich[k] || '').trim();
+        for (const k of ['tmdb_api_key', 'omdb_api_key', 'mdblist_api_key']) if (b.enrich[k] !== undefined) v[k] = String(b.enrich[k] || '').trim();
         if (settings) await settings.set('enrich', v); else Object.assign(config.enrich = config.enrich || {}, v);
       }
       res.json({ ok: true });

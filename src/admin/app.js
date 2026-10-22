@@ -106,7 +106,7 @@
         <div class="stat"><b>${suppressed}</b><small>deduped 24h</small></div>
         <div class="stat"><b>${queued}</b><small>in queue</small></div>
         <div class="stat"><b>${o.sources.filter(s => s.stats).length}/${o.sources.length}</b><small>sources active</small></div>
-        <div class="stat"><b>${o.enrich.tmdb || o.enrich.omdb ? 'on' : 'off'}</b><small>metadata enrichment</small></div>
+        <div class="stat"><b>${['tmdb', 'mdblist', 'omdb'].filter(k => o.enrich[k]).join(' + ') || 'off'}</b><small>metadata enrichment</small></div>
       </div>
       <h2>Channels</h2><div class="lanes">${lanes}</div>
       ${o.failed_recent && o.failed_recent.length ? `<h2>Recent failures</h2><table class="table"><tbody>${o.failed_recent.map(r => `<tr class="clickable" data-id="${r.id}"><td>${esc(r.source)}</td><td>${routeTag(r.route)}</td><td>${esc(r.title || '')}</td><td class="mono">${esc(r.last_error || '')}</td><td><small>${ago(r.received_at)}</small></td></tr>`).join('')}</tbody></table>` : ''}
@@ -281,7 +281,8 @@
         <div class="field"><label>Map tile zoom</label><input id="s-zoom" type="number" min="1" max="16" value="${esc(s.geoip.zoom)}"></div>
         <div class="field"><label>Release notes for app updates (GitHub)</label><select id="s-github"><option value="1"${s.enrich.github ? ' selected' : ''}>on</option><option value="0"${!s.enrich.github ? ' selected' : ''}>off</option></select></div>
         <div class="field"><label>TMDb API key ${s.enrich.tmdb ? `<span class="badge">set ${esc(s.enrich.tmdb_api_key)}</span>` : '<small>(free: themoviedb.org → settings → API)</small>'}</label><input id="s-tmdb" type="password" placeholder="${s.enrich.tmdb ? 'leave blank to keep' : 'paste key'}"></div>
-        <div class="field"><label>OMDb API key ${s.enrich.omdb ? `<span class="badge">set ${esc(s.enrich.omdb_api_key)}</span>` : '<small>(free: omdbapi.com/apikey.aspx, 1000/day)</small>'}</label><input id="s-omdb" type="password" placeholder="${s.enrich.omdb ? 'leave blank to keep' : 'paste key'}"></div>
+        <div class="field"><label>MDBList API key ${s.enrich.mdblist ? `<span class="badge">set ${esc(s.enrich.mdblist_api_key)}</span>` : '<small>(free: mdblist.com → preferences → API; IMDb / RT / Metacritic / Trakt / Letterboxd ratings)</small>'}</label><input id="s-mdblist" type="password" placeholder="${s.enrich.mdblist ? 'leave blank to keep' : 'paste key'}"></div>
+        <div class="field"><label>OMDb API key ${s.enrich.omdb ? `<span class="badge">set ${esc(s.enrich.omdb_api_key)}</span>` : '<small>(optional: omdbapi.com, adds awards)</small>'}</label><input id="s-omdb" type="password" placeholder="${s.enrich.omdb ? 'leave blank to keep' : 'paste key'}"></div>
       </div>
       <div class="actions"><button id="s-save">Save</button><small>History: ${s.store.enabled ? `on, ${s.store.retention_days} days retention` : 'off (no DATABASE_URL) — settings apply until restart only'}</small></div></div>`;
   }
@@ -290,6 +291,7 @@
     const body = { dedup: { window_sec: $('#s-dedup').value }, geoip: { enabled: $('#s-geoip').value === '1', zoom: $('#s-zoom').value }, enrich: { github: $('#s-github').value === '1' } };
     if ($('#s-tmdb').value.trim()) body.enrich.tmdb_api_key = $('#s-tmdb').value.trim();
     if ($('#s-omdb').value.trim()) body.enrich.omdb_api_key = $('#s-omdb').value.trim();
+    if ($('#s-mdblist').value.trim()) body.enrich.mdblist_api_key = $('#s-mdblist').value.trim();
     try { await api('PUT', '/settings', body); toast('settings saved'); overview = await get('/overview'); render(); } catch (err) { toast(err.message, true); }
   });
 

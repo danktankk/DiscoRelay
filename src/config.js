@@ -18,7 +18,7 @@ const DEFAULTS = {
   store: { retention_days: 90 },
   metrics: { public: false },
   geoip: { enabled: true, map: true, zoom: 10, per_minute: 40 },
-  enrich: { github: true, tmdb_api_key: '', omdb_api_key: '' },
+  enrich: { github: true, tmdb_api_key: '', mdblist_api_key: '', omdb_api_key: '' },
 };
 
 /**
@@ -52,6 +52,7 @@ function loadConfig(configPath, env = process.env) {
   if (env.GEOIP_ENABLED !== undefined) cfg.geoip.enabled = env.GEOIP_ENABLED !== 'false';
   if (env.TMDB_API_KEY) cfg.enrich.tmdb_api_key = env.TMDB_API_KEY.trim();
   if (env.OMDB_API_KEY) cfg.enrich.omdb_api_key = env.OMDB_API_KEY.trim();
+  if (env.MDBLIST_API_KEY) cfg.enrich.mdblist_api_key = env.MDBLIST_API_KEY.trim();
   if (env.ENRICH_GITHUB !== undefined) cfg.enrich.github = env.ENRICH_GITHUB !== 'false';
 
   for (const [key, value] of Object.entries(env)) {

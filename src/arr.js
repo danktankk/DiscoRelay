@@ -54,8 +54,11 @@ function ratingsLine(r = {}) {
   const parts = [];
   if (r.tmdb) parts.push(`TMDb: ${r.tmdb}`);
   if (r.imdb) parts.push(`IMDb: ${r.imdb}`);
-  if (r.rt) parts.push(`RT: ${r.rt}`);
+  if (r.rt) parts.push(`RT: ${r.rt}${r.rt_audience ? ` (audience ${r.rt_audience})` : ''}`);
+  else if (r.rt_audience) parts.push(`RT audience: ${r.rt_audience}`);
   if (r.metacritic) parts.push(`MC: ${r.metacritic}`);
+  if (r.trakt) parts.push(`Trakt: ${r.trakt}`);
+  if (r.letterboxd) parts.push(`Letterboxd: ${r.letterboxd}`);
   return parts.join(' • ');
 }
 

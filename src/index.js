@@ -22,7 +22,7 @@ async function main() {
   const dedup = new Dedup({ windowSec: config.dedup.window_sec, maxEntries: config.dedup.max_entries });
   const parsers = loadParsers(undefined, log);
   const geoip = new GeoIP({ enabled: config.geoip.enabled !== false, perMinute: config.geoip.per_minute, metrics, log });
-  const enrich = new Enricher({ tmdbKey: config.enrich.tmdb_api_key, omdbKey: config.enrich.omdb_api_key, github: config.enrich.github, metrics, log });
+  const enrich = new Enricher({ tmdbKey: config.enrich.tmdb_api_key, omdbKey: config.enrich.omdb_api_key, mdblistKey: config.enrich.mdblist_api_key, github: config.enrich.github, metrics, log });
   const services = { geoip, enrich };
   const settings = await new Settings({ config, store, log, services, dedup }).load(); // admin-page overrides from Postgres
   const app = createApp({ config, store, sender, dedup, metrics, log, parsers, services, settings });
