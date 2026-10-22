@@ -3,7 +3,7 @@
 </p>
 
 <p align="right">
-  <img src="https://img.shields.io/badge/version-2.2.0-blue" />
+  <img src="https://img.shields.io/badge/version-2.2.1-blue" />
   <img src="https://img.shields.io/badge/docker-compose-blue" />
   <img src="https://img.shields.io/badge/license-AGPL--3.0-blue" />
 </p>

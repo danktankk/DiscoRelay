@@ -13,13 +13,14 @@ module.exports = {
     const icon = cfg.icon || '';
     const event = body.eventType || 'Unknown';
     const route = cfg.route && cfg.route !== 'auto' ? cfg.route : 'media';
+    const APP_I = body.instanceName && String(body.instanceName).trim() && String(body.instanceName).trim() !== APP ? String(body.instanceName).trim() : APP;
 
     if (event === 'ApplicationUpdate') {
       const enrich = ctx.services && ctx.services.enrich;
       const notes = enrich ? await enrich.release('lidarr', body.newVersion) : null;
-      return [arr.appUpdateEmbed({ app: APP, icon, body, notes, route: 'updates' })];
+      return [arr.appUpdateEmbed({ app: APP_I, icon, body, notes, route: 'updates' })];
     }
-    if (event === 'Health' || event === 'HealthRestored') return [arr.healthEmbed({ app: APP, icon, body, event })];
+    if (event === 'Health' || event === 'HealthRestored') return [arr.healthEmbed({ app: APP_I, icon, body, event })];
 
     const info = arr.eventInfo(event, body.isUpgrade);
     const artist = body.artist || {};
@@ -54,7 +55,7 @@ module.exports = {
 
     return [{
       event: info.key,
-      author: arr.author(APP, info.label, icon),
+      author: arr.author(APP_I, info.label, icon),
       title: `${albumTitle || artistName}${albumYear ? ` (${albumYear})` : ''}`.slice(0, 256),
       url: album.mbId ? `https://musicbrainz.org/release-group/${album.mbId}` : undefined,
       color: info.color,

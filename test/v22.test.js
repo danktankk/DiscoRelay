@@ -34,6 +34,11 @@ test('arr helpers: runtime, ratings line, release notes parser', () => {
   const notes = parseReleaseNotes('## Changes\n\n**New:**\n- Show size in history details (#1234)\n- Option two\n\n**Fixed:**\n- Deleting movie folder fails\n\nOther text');
   assert.deepEqual(notes.new, ['Show size in history details', 'Option two']);
   assert.deepEqual(notes.fixed, ['Deleting movie folder fails']);
+  // the shape Radarr/Lidarr actually publish: "* <sha> Fixed: …", plus Sonarr's "* Fixed: … by @user in <pr>"
+  const real = parseReleaseNotes('*Docker note*\n\n## Changes:\n\n* 886db23c58f13e63537c99d0173c2bbfdd7af253 Multiple Translations updated by Weblate\n* b646386e77706031d8a198884205a5b5fada696f Update state with the filtered movie file languages\n* 4aa259a666097b34cf9a2cf21197b43576b5ecf3 Automated API Docs update\n* 35f1a61bf800c4eadfb959435bd33f39844f799d Fixed: Updating movie files via Manage Files\n* f7da5b0866b3cdfb80108c79b52deca9fbf848da Bump version to 5.21.1\n* 682cc70acf6b4ba7e5b2806ae92f435b43b1d67f Fixed: Drop downs flickering in some cases [ #10869 ]\n* c52c7f438764e793529e0cdbfdcc12400ff6fc35 New: Filter movies by movie file quality\n### Changes\n* Fixed: Unexpected languages stored in DB will be treated as Unknown by @mynameisbogdan in https://github.com/Sonarr/Sonarr/pull/8810\n');
+  assert.deepEqual(real.new, ['Filter movies by movie file quality']);
+  assert.deepEqual(real.fixed, ['Updating movie files via Manage Files', 'Drop downs flickering in some cases', 'Unexpected languages stored in DB will be treated as Unknown']);
+  assert.deepEqual(real.other, ['Update state with the filtered movie file languages']);
   assert.equal(arr.mediaInfoLine({ width: 3840, height: 2160, videoDynamicRangeType: 'HDR10', videoCodec: 'x265', audioCodec: 'EAC3 Atmos', audioChannels: 5.1, subtitles: ['eng'] }), '3840x2160 • HDR10 • x265 • EAC3 Atmos 5.1 • subs: eng');
 });
 

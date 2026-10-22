@@ -120,8 +120,9 @@ function appUpdateEmbed({ app, icon, body, notes, route = 'updates' }) {
   triplet(fields, [['Old Version', body.previousVersion], ['New Version', body.newVersion], ['Branch', body.branch || (notes && notes.branch)]]);
   if (notes && notes.new && notes.new.length) fields.push({ name: 'New', value: codeBlock(numbered(notes.new)), inline: false });
   if (notes && notes.fixed && notes.fixed.length) fields.push({ name: 'Fixed', value: codeBlock(numbered(notes.fixed)), inline: false });
-  if (notes && notes.other && notes.other.length && !(notes.new && notes.new.length) && !(notes.fixed && notes.fixed.length)) {
-    fields.push({ name: 'Changes', value: codeBlock(numbered(notes.other)), inline: false });
+  if (notes && notes.other && notes.other.length) {
+    const tagged = (notes.new && notes.new.length) || (notes.fixed && notes.fixed.length);
+    fields.push({ name: tagged ? 'Other changes' : 'Changes', value: codeBlock(numbered(notes.other, tagged ? 6 : 12)), inline: false });
   }
   if (!fields.length && body.message) fields.push({ name: 'Message', value: String(body.message).slice(0, 1000), inline: false });
   return {

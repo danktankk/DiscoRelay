@@ -1,6 +1,6 @@
 {
   "name": "discorelay",
-  "version": "2.2.0",
+  "version": "2.2.1",
   "description": "Self-hosted Discord notification hub: authenticated webhook ingest, formatting, routing, dedup, durable delivery with history",
   "main": "src/index.js",
   "scripts": {

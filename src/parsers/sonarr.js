@@ -19,12 +19,13 @@ module.exports = {
     const event = body.eventType || 'Unknown';
     const route = cfg.route && cfg.route !== 'auto' ? cfg.route : 'media';
     const enrich = ctx.services && ctx.services.enrich;
+    const APP_I = body.instanceName && String(body.instanceName).trim() && String(body.instanceName).trim() !== APP ? String(body.instanceName).trim() : APP;
 
     if (event === 'ApplicationUpdate') {
       const notes = enrich ? await enrich.release('sonarr', body.newVersion) : null;
-      return [arr.appUpdateEmbed({ app: APP, icon, body, notes, route: 'updates' })];
+      return [arr.appUpdateEmbed({ app: APP_I, icon, body, notes, route: 'updates' })];
     }
-    if (event === 'Health' || event === 'HealthRestored') return [arr.healthEmbed({ app: APP, icon, body, event })];
+    if (event === 'Health' || event === 'HealthRestored') return [arr.healthEmbed({ app: APP_I, icon, body, event })];
 
     const series = body.series || {};
     const episodes = Array.isArray(body.episodes) ? body.episodes : [];
@@ -36,7 +37,7 @@ module.exports = {
     const tmdbId = series.tmdbId || '';
     const imdbId = series.imdbId || '';
 
-    if (event === 'ManualInteractionRequired') return [arr.manualEmbed({ app: APP, icon, body, subject, route })];
+    if (event === 'ManualInteractionRequired') return [arr.manualEmbed({ app: APP_I, icon, body, subject, route })];
 
     const info = arr.eventInfo(event, body.isUpgrade);
     const release = body.release || {};
@@ -93,7 +94,7 @@ module.exports = {
 
     return [{
       event: info.key,
-      author: arr.author(APP, info.label, icon),
+      author: arr.author(APP_I, info.label, icon),
       title: subject.slice(0, 256),
       url: tvdbUrl(tvdbId) || undefined,
       color: info.color,

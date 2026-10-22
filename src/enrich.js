@@ -16,7 +16,12 @@ const RELEASE_REPOS = {
   prowlarr: 'Prowlarr/Prowlarr',
 };
 
-/** Parse a *arr GitHub release body into { new: [], fixed: [], other: [] }. */
+/**
+ * Parse a *arr GitHub release body into { new: [], fixed: [], other: [] }.
+ * Real bodies look like "## Changes:" followed by "* <commit sha> Fixed: …" / "* <sha> New: …" / "* <sha> plain"
+ * (Radarr, Lidarr) or "### Changes" + "* Fixed: … by @user in <pr url>" (Sonarr). Section headings
+ * named New/Fixed are honoured too. Translation/version-bump/API-docs noise is dropped.
+ */
 function parseReleaseNotes(body) {
   const out = { new: [], fixed: [], other: [] };
   if (!body || typeof body !== 'string') return out;
@@ -31,10 +36,24 @@ function parseReleaseNotes(body) {
       continue;
     }
     const item = /^[-*+]\s+(.*)$/.exec(line);
-    if (item) {
-      const text = item[1].replace(/\s*\(#\d+\)\s*$/, '').replace(/^\*\*(.+?)\*\*:?\s*/, '$1: ').trim();
-      if (text) out[section].push(text);
+    if (!item) continue;
+    let text = item[1]
+      .replace(/^[0-9a-f]{7,40}\s+/i, '')                 // leading commit sha
+      .replace(/\s+by\s+@[\w-]+\s+in\s+https?:\S+$/i, '')  // "by @user in <pr>"
+      .replace(/\s*\(#\d+\)\s*$/, '')
+      .replace(/\s*\[\s*#\d+\s*\]\s*$/, '')
+      .replace(/^\*\*(.+?)\*\*:?\s*/, '$1: ')
+      .trim();
+    if (!text) continue;
+    if (/^(multiple translations updated|automated api docs update|bump (to|version)|update translations?)/i.test(text)) continue;
+    let target = section;
+    const tagged = /^(new|added|fixed|fix|changed|removed)\s*:\s*(.*)$/i.exec(text);
+    if (tagged) {
+      const tag = tagged[1].toLowerCase();
+      target = /^(new|added)/.test(tag) ? 'new' : /^fix/.test(tag) ? 'fixed' : 'other';
+      text = tagged[2].trim() || text;
     }
+    out[target].push(text);
   }
   return out;
 }
